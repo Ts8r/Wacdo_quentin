@@ -1,0 +1,15 @@
+bmb_creations_output_folder: '{project-root}/_byan-output/bmb-creations'
+user_name: Quentin
+communication_language: Francais
+document_output_language: Francais
+output_folder: '{project-root}/_byan-output'
+platform: codex
+install_mode: manual
+byan_version: 1.0.0
+installed_agents:
+  - hermes
+  - codex
+  - byan
+  - drawio
+  - patnote
+  - kim-jung-un

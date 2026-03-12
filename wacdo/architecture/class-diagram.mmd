@@ -1,0 +1,235 @@
+classDiagram
+direction TB
+
+%% =========================
+%% 1) COEUR METIER (DOMAIN)
+%% =========================
+
+class Commande {
+  +idCmd: int
+  +idUser: int?
+  +idStatut: int
+  +idCanal: int
+  +numeroTicket: string
+  +dateCmd: string
+  +totalTtc: float
+  +ajouterLigneProduit(ligne:CommandeProduit): void
+  +ajouterLigneMenu(ligne:CommandeMenu): void
+  +calculerTotal(): float
+  +changerStatut(statut:StatutCommande): void
+}
+
+class Produit {
+  +idProduit: int
+  +nom: string
+  +description: string
+  +prixUnitaire: float
+  +disponibilite: bool
+  +quantite: int
+  +estDisponible(qte:int): bool
+  +reserverStock(qte:int): void
+  +restituerStock(qte:int): void
+}
+
+class Menu {
+  +idMenu: int
+  +nom: string
+  +prix: float
+  +disponibilite: bool
+  +estDisponible(): bool
+}
+
+class Utilisateur {
+  +idUser: int
+  +idRole: int
+  +nom: string
+  +prenom: string
+  +email: string
+  -motDePasseHash: string
+  +numTel: string
+  +assignerRole(role:Role): void
+  +verifierMotDePasse(plain:string): bool
+}
+
+%% =========================
+%% 2) REFERENCES / LOOKUP
+%% =========================
+
+class Role {
+  +idRole: int
+  +codeRole: string
+  +libelle: string
+}
+
+class StatutCommande {
+  +idStatut: int
+  +libelle: string
+}
+
+class Canal {
+  +idCanal: int
+  +libelle: string
+}
+
+class Categorie {
+  +idCat: int
+  +type: string
+  +description: string
+}
+
+class Ingredient {
+  +idIngredient: int
+  +nom: string
+  +coutUnitaire: float
+  +quantite: float
+  +debiter(qte:float): void
+  +crediter(qte:float): void
+}
+
+%% =========================
+%% 3) CLASSES DE LIAISON
+%% =========================
+
+class CommandeProduit {
+  +idCmd: int
+  +idProduit: int
+  +quantite: int
+  +prixUnitaire: float
+  +prixLigne: float
+  +recalculerPrixLigne(): float
+}
+
+class CommandeMenu {
+  +idCmd: int
+  +idMenu: int
+  +quantite: int
+  +taille: string
+  +prixUnitaire: float
+  +prixLigne: float
+  +recalculerPrixLigne(): float
+}
+
+class MenuProduit {
+  +idMenu: int
+  +idProduit: int
+  +quantite: int
+}
+
+class IngredientsProduits {
+  +idIngredient: int
+  +idProduit: int
+  +quantite: float
+}
+
+class ProduitsCategories {
+  +idProduit: int
+  +idCat: int
+}
+
+%% =========================
+%% 4) ARCHITECTURE POO
+%% =========================
+
+class ProductRepositoryInterface {
+  <<interface>>
+  +findAll(): array
+  +findById(id:int): Produit
+  +save(produit:Produit): void
+  +delete(id:int): bool
+  +findByCategorie(idCat:int): array
+}
+
+class CommandeRepositoryInterface {
+  <<interface>>
+  +findById(id:int): Commande
+  +findByTicket(ticket:string): Commande
+  +save(commande:Commande): void
+  +addLigneProduit(idCmd:int, ligne:CommandeProduit): void
+  +addLigneMenu(idCmd:int, ligne:CommandeMenu): void
+  +updateStatut(idCmd:int, idStatut:int): bool
+}
+
+class DbProduitRepository {
+  -pdo: PDO
+  +findAll(): array
+  +findById(id:int): Produit
+  +save(produit:Produit): void
+  +delete(id:int): bool
+  +findByCategorie(idCat:int): array
+}
+
+class DbCommandeRepository {
+  -pdo: PDO
+  +findById(id:int): Commande
+  +findByTicket(ticket:string): Commande
+  +save(commande:Commande): void
+  +addLigneProduit(idCmd:int, ligne:CommandeProduit): void
+  +addLigneMenu(idCmd:int, ligne:CommandeMenu): void
+  +updateStatut(idCmd:int, idStatut:int): bool
+}
+
+class CommandeService {
+  -commandeRepo: CommandeRepositoryInterface
+  -produitRepo: ProductRepositoryInterface
+  +creerCommandeAnonyme(idCanal:int): Commande
+  +ajouterProduit(idCmd:int, idProduit:int, qte:int): void
+  +validerCommande(idCmd:int): void
+}
+
+class DomainException {
+  <<exception>>
+  +fromMessage(message:string): DomainException
+}
+
+class NotFoundException {
+  <<exception>>
+  +forId(entity:string, id:int): NotFoundException
+  +forKey(entity:string, key:string): NotFoundException
+}
+
+class ValidationException {
+  <<exception>>
+  +forField(field:string, reason:string): ValidationException
+  +forRule(rule:string): ValidationException
+}
+
+%% =========================
+%% 5) RELATIONS METIER/DONNEES
+%% =========================
+
+Role "1" -- "0..*" Utilisateur : attribue
+Utilisateur "0..1" -- "0..*" Commande : passe
+StatutCommande "1" -- "0..*" Commande : definit
+Canal "1" -- "0..*" Commande : provient_de
+
+Commande "1" -- "0..*" CommandeProduit : contient
+Commande "1" -- "0..*" CommandeMenu : contient
+Produit "1" -- "0..*" CommandeProduit : reference
+Menu "1" -- "0..*" CommandeMenu : reference
+
+Menu "1" -- "0..*" MenuProduit : compose
+Produit "1" -- "0..*" MenuProduit : inclut
+Ingredient "1" -- "0..*" IngredientsProduits : compose
+Produit "1" -- "0..*" IngredientsProduits : contient
+Produit "1" -- "0..*" ProduitsCategories : classe
+Categorie "1" -- "0..*" ProduitsCategories : regroupe
+
+%% =========================
+%% 6) RELATIONS TECHNIQUES POO
+%% =========================
+
+ProductRepositoryInterface <|.. DbProduitRepository
+CommandeRepositoryInterface <|.. DbCommandeRepository
+CommandeService --> CommandeRepositoryInterface
+CommandeService --> ProductRepositoryInterface
+
+NotFoundException --|> DomainException
+ValidationException --|> DomainException
+
+%% =========================
+%% 7) LEGENDE DES RELATIONS
+%% =========================
+%% --      : association metier/data
+%% <|..    : implementation d'interface
+%% -->     : dependance technique
+%% --|>    : heritage
