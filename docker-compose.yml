@@ -1,0 +1,71 @@
+# Docker Compose — Wacdo Project (quentin)
+# Services : MariaDB + PHP (Apache + PDO MySQL)
+# Network  : wacdo_bak_quentin (bridge interne) + admin_proxy (Traefik externe)
+# Domain   : quentin-wacdo.stark.a3n.fr (wildcard DNS)
+
+services:
+
+  wacdo_mariadb:
+    image: mariadb:10.11
+    container_name: wacdo-quentin-mariadb
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MARIADB_DATABASE:      ${DB_NAME}
+      MARIADB_USER:          ${DB_USER}
+      MARIADB_PASSWORD:      ${DB_PASSWORD}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    networks:
+      - wacdo_bak_quentin
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  wacdo_php:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    image: wacdo-quentin-php:latest
+    container_name: wacdo-quentin-php
+    restart: unless-stopped
+    environment:
+      DB_HOST:     wacdo_mariadb
+      DB_PORT:     ${DB_PORT}
+      DB_NAME:     ${DB_NAME}
+      DB_USER:     ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_CHARSET:  ${DB_CHARSET}
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      wacdo_mariadb:
+        condition: service_healthy
+    networks:
+      - wacdo_bak_quentin
+      - admin_proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=admin_proxy"
+      - "traefik.http.routers.wacdo-quentin-back.rule=Host(`${BACK_URL}`)"
+      - "traefik.http.routers.wacdo-quentin-back.entrypoints=web"
+      - "traefik.http.routers.wacdo-quentin-back.middlewares=redirect-https"
+      - "traefik.http.services.wacdo-quentin-back.loadbalancer.server.port=80"
+      - "traefik.http.routers.wacdo-quentin-back-secure.rule=Host(`${BACK_URL}`)"
+      - "traefik.http.routers.wacdo-quentin-back-secure.entrypoints=websecure"
+      - "traefik.http.routers.wacdo-quentin-back-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.wacdo-quentin-back-secure.service=wacdo-quentin-back"
+
+networks:
+  wacdo_bak_quentin:
+    external: true
+    name: wacdo_bak_quentin
+  admin_proxy:
+    external: true
+
+volumes:
+  mariadb_data:
+    driver: local
