@@ -48,7 +48,6 @@ class Utilisateur {
   -motDePasseHash: string
   +numTel: string
   +assignerRole(role:Role): void
-  +verifierMotDePasse(plain:string): bool
 }
 
 %% =========================
@@ -84,6 +83,7 @@ class Ingredient {
   +quantite: float
   +debiter(qte:float): void
   +crediter(qte:float): void
+  +estDisponible(qte:float): bool
 }
 
 %% =========================
@@ -97,6 +97,7 @@ class CommandeProduit {
   +prixUnitaire: float
   +prixLigne: float
   +recalculerPrixLigne(): float
+  +changerQuantite(qte:int): void
 }
 
 class CommandeMenu {
@@ -104,9 +105,10 @@ class CommandeMenu {
   +idMenu: int
   +quantite: int
   +taille: string
-  +prixUnitaire: float
   +prixLigne: float
   +recalculerPrixLigne(): float
+  +changerQuantite(qte:int): void
+  +changerTaille(taille:string): void
 }
 
 class MenuProduit {
