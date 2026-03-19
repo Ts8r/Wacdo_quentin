@@ -20,7 +20,7 @@ CREATE TABLE utilisateurs (
   nom VARCHAR(100) NOT NULL,
   prenom VARCHAR(100) NOT NULL,
   email VARCHAR(190) NOT NULL,
-  mot_de_passe VARCHAR(255) NOT NULL,
+  mot_de_passe_hash VARCHAR(255) NOT NULL,
   num_tel VARCHAR(20) NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_utilisateurs_email (email),

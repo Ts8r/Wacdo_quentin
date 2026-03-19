@@ -177,6 +177,7 @@ Ces classes n'heritent d'aucune autre classe dans le diagramme actuel.
 - `idMenu: int`
 - `quantite: int`
 - `taille: string`
+- `prixUnitaire: float`
 - `prixLigne: float`
 
 **Methodes**
