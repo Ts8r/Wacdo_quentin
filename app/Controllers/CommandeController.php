@@ -92,10 +92,10 @@ final class CommandeController
                 throw ValidationException::forField($field . '.' . $index . '.quantite', 'must be a positive integer');
             }
 
-            $taille = trim((string) ($line['taille'] ?? 'standard'));
+            $taille = strtoupper(trim((string) ($line['taille'] ?? 'M')));
 
-            if ($field === 'menus' && $taille === '') {
-                throw ValidationException::forField($field . '.' . $index . '.taille', 'cannot be empty');
+            if ($field === 'menus' && !in_array($taille, ['S', 'M', 'L'], true)) {
+                throw ValidationException::forField($field . '.' . $index . '.taille', 'must be S, M or L');
             }
 
             if (isset($normalized[$id])) {

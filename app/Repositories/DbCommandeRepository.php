@@ -48,6 +48,7 @@ final class DbCommandeRepository implements CommandeRepositoryInterface
             $idCmd = (int) $this->pdo->lastInsertId();
             $productLines = $this->insertProductLines($idCmd, $produits);
             $menuLines = $this->insertMenuLines($idCmd, $menus);
+            $this->debitIngredients($this->collectIngredientNeeds($produits, $menus));
             $total = $this->sumLines($productLines) + $this->sumLines($menuLines);
 
             $update = $this->pdo->prepare('UPDATE commandes SET total_ttc = :total_ttc WHERE id_cmd = :id_cmd');
@@ -144,9 +145,9 @@ final class DbCommandeRepository implements CommandeRepositoryInterface
         foreach ($menus as $line) {
             $menu = $this->findMenuForOrder((int) $line['id']);
             $quantite = (int) $line['quantite'];
-            $prixUnitaire = (float) $menu['prix'];
-            $prixLigne = round($prixUnitaire * $quantite, 2);
             $taille = (string) $line['taille'];
+            $prixUnitaire = $this->priceForMenuSize((float) $menu['prix'], $taille);
+            $prixLigne = round($prixUnitaire * $quantite, 2);
 
             $insert->execute([
                 'id_cmd' => $idCmd,
@@ -168,6 +169,125 @@ final class DbCommandeRepository implements CommandeRepositoryInterface
         }
 
         return $lines;
+    }
+
+    private function collectIngredientNeeds(array $produits, array $menus): array
+    {
+        $needs = [];
+
+        foreach ($produits as $line) {
+            $this->addProductIngredientNeeds($needs, (int) $line['id'], (int) $line['quantite']);
+        }
+
+        foreach ($menus as $line) {
+            $this->addMenuIngredientNeeds($needs, (int) $line['id'], (int) $line['quantite']);
+        }
+
+        return $needs;
+    }
+
+    private function addProductIngredientNeeds(array &$needs, int $idProduit, int $quantiteProduit): void
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT
+                i.id_ingredient,
+                i.nom,
+                ip.quantite
+             FROM ingredients_produits ip
+             INNER JOIN ingredients i ON i.id_ingredient = ip.id_ingredient
+             WHERE ip.id_produit = :id_produit'
+        );
+        $stmt->execute(['id_produit' => $idProduit]);
+
+        foreach ($stmt->fetchAll() as $ingredient) {
+            $this->addIngredientNeed(
+                $needs,
+                (int) $ingredient['id_ingredient'],
+                (string) $ingredient['nom'],
+                (float) $ingredient['quantite'] * $quantiteProduit,
+            );
+        }
+    }
+
+    private function addMenuIngredientNeeds(array &$needs, int $idMenu, int $quantiteMenu): void
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT
+                i.id_ingredient,
+                i.nom,
+                ip.quantite AS quantite_ingredient,
+                mp.quantite AS quantite_produit
+             FROM menu_produit mp
+             INNER JOIN ingredients_produits ip ON ip.id_produit = mp.id_produit
+             INNER JOIN ingredients i ON i.id_ingredient = ip.id_ingredient
+             WHERE mp.id_menu = :id_menu'
+        );
+        $stmt->execute(['id_menu' => $idMenu]);
+
+        foreach ($stmt->fetchAll() as $ingredient) {
+            $this->addIngredientNeed(
+                $needs,
+                (int) $ingredient['id_ingredient'],
+                (string) $ingredient['nom'],
+                (float) $ingredient['quantite_ingredient'] * (int) $ingredient['quantite_produit'] * $quantiteMenu,
+            );
+        }
+    }
+
+    private function addIngredientNeed(array &$needs, int $idIngredient, string $nom, float $quantite): void
+    {
+        if (!isset($needs[$idIngredient])) {
+            $needs[$idIngredient] = [
+                'id' => $idIngredient,
+                'nom' => $nom,
+                'quantite' => 0.0,
+            ];
+        }
+
+        $needs[$idIngredient]['quantite'] += $quantite;
+    }
+
+    private function debitIngredients(array $needs): void
+    {
+        if ($needs === []) {
+            return;
+        }
+
+        $select = $this->pdo->prepare(
+            'SELECT nom, quantite
+             FROM ingredients
+             WHERE id_ingredient = :id_ingredient
+             FOR UPDATE'
+        );
+        $update = $this->pdo->prepare(
+            'UPDATE ingredients
+             SET quantite = quantite - :quantite
+             WHERE id_ingredient = :id_ingredient'
+        );
+
+        foreach ($needs as $need) {
+            $select->execute(['id_ingredient' => $need['id']]);
+            $ingredient = $select->fetch();
+
+            if ($ingredient === false) {
+                throw ValidationException::forField('ingredients', sprintf('ingredient %d does not exist', $need['id']));
+            }
+
+            $stock = (float) $ingredient['quantite'];
+            $required = (float) $need['quantite'];
+
+            if ($stock < $required) {
+                throw ValidationException::forField(
+                    'ingredients',
+                    sprintf('stock insuffisant pour %s: %.3f requis, %.3f disponible', $need['nom'], $required, $stock),
+                );
+            }
+
+            $update->execute([
+                'id_ingredient' => $need['id'],
+                'quantite' => number_format($required, 3, '.', ''),
+            ]);
+        }
     }
 
     private function findOneForApi(int $idCmd): array
@@ -310,6 +430,18 @@ final class DbCommandeRepository implements CommandeRepositoryInterface
         }
 
         return $menu;
+    }
+
+    private function priceForMenuSize(float $basePrice, string $taille): float
+    {
+        $price = match ($taille) {
+            'S' => $basePrice - 1.00,
+            'M' => $basePrice,
+            'L' => $basePrice + 1.00,
+            default => throw ValidationException::forField('taille', 'must be S, M or L'),
+        };
+
+        return max(0.01, round($price, 2));
     }
 
     private function findCanalByLibelle(string $libelle): array
