@@ -13,6 +13,7 @@ final class Produit
         public string $nom = '',
         public string $description = '',
         public float $prixUnitaire = 0.0,
+        public string $image = '',
         public bool $disponibilite = true,
         public int $quantite = 0,
     ) {

@@ -10,6 +10,7 @@ final class Menu
         public int $idMenu = 0,
         public string $nom = '',
         public float $prix = 0.0,
+        public string $image = '',
         public bool $disponibilite = true,
     ) {
     }

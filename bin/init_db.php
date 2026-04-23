@@ -72,6 +72,8 @@ foreach ($statements as $statement) {
         continue;
     }
 
+    $sql = preg_replace('/^CREATE TABLE\s+/i', 'CREATE TABLE IF NOT EXISTS ', $sql) ?? $sql;
+
     $pdo->exec($sql);
     $executed++;
 }
@@ -81,4 +83,3 @@ fwrite(STDOUT, sprintf(
     $dbName,
     $executed
 ));
-
