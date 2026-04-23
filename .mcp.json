@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "byan": {
+      "command": "node",
+      "args": [
+        "/home/acadenice/quentin_wacdo/Wacdo_quentin/_byan/mcp/byan-mcp-server/server.js"
+      ],
+      "env": {
+        "BYAN_API_URL": "http://localhost:3737",
+        "BYAN_API_TOKEN": ""
+      }
+    }
+  }
+}

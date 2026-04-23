@@ -3,12 +3,13 @@ user_name: Quentin
 communication_language: Francais
 document_output_language: Francais
 output_folder: '{project-root}/_byan-output'
-platform: codex
+platform: copilot,claude
 install_mode: manual
 byan_version: 2.11.0
 installed_agents:
   - hermes
-  - codex
+  - marc
+  - claude
   - bmad-master
   - expert-merise-agile
   - byan
