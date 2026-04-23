@@ -453,7 +453,7 @@ try {
         $upsertIngredient->execute([
             'nom' => $name,
             'cout_unitaire' => number_format((float) $values['cout'], 2, '.', ''),
-            'quantite' => number_format((float) $values['stock'], 3, '.', ''),
+            'quantite' => (int) $values['stock'],
         ]);
         $ingredientIdsByName[$name] = $fetchId($pdo, 'SELECT id_ingredient FROM ingredients WHERE nom = :nom', ['nom' => $name]);
         $report['ingredients']++;
@@ -473,7 +473,7 @@ try {
             $upsertIngredientProduit->execute([
                 'id_ingredient' => $idIngredient,
                 'id_produit' => $idProduit,
-                'quantite' => number_format((float) $quantity, 3, '.', ''),
+                'quantite' => (int) $quantity,
             ]);
             $report['ingredients_produits']++;
         }

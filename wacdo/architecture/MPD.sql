@@ -98,7 +98,7 @@ CREATE TABLE ingredients (
   id_ingredient INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   nom VARCHAR(120) NOT NULL,
   cout_unitaire DECIMAL(10,2) NOT NULL,
-  quantite DECIMAL(10,3) NOT NULL DEFAULT 0.000,
+  quantite INT UNSIGNED NOT NULL DEFAULT 0,
   UNIQUE KEY uq_ingredients_nom (nom)
 ) ENGINE=InnoDB;
 
@@ -158,7 +158,7 @@ CREATE TABLE menu_produit (
 CREATE TABLE ingredients_produits (
   id_ingredient INT UNSIGNED NOT NULL,
   id_produit INT UNSIGNED NOT NULL,
-  quantite DECIMAL(10,3) NOT NULL,
+  quantite INT UNSIGNED NOT NULL,
   PRIMARY KEY (id_ingredient, id_produit),
   KEY idx_ingredients_produits_id_produit (id_produit),
   CONSTRAINT fk_ingredients_produits_ingredients

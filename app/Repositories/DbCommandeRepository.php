@@ -204,7 +204,7 @@ final class DbCommandeRepository implements CommandeRepositoryInterface
                 $needs,
                 (int) $ingredient['id_ingredient'],
                 (string) $ingredient['nom'],
-                (float) $ingredient['quantite'] * $quantiteProduit,
+                (int) $ingredient['quantite'] * $quantiteProduit,
             );
         }
     }
@@ -229,18 +229,18 @@ final class DbCommandeRepository implements CommandeRepositoryInterface
                 $needs,
                 (int) $ingredient['id_ingredient'],
                 (string) $ingredient['nom'],
-                (float) $ingredient['quantite_ingredient'] * (int) $ingredient['quantite_produit'] * $quantiteMenu,
+                (int) $ingredient['quantite_ingredient'] * (int) $ingredient['quantite_produit'] * $quantiteMenu,
             );
         }
     }
 
-    private function addIngredientNeed(array &$needs, int $idIngredient, string $nom, float $quantite): void
+    private function addIngredientNeed(array &$needs, int $idIngredient, string $nom, int $quantite): void
     {
         if (!isset($needs[$idIngredient])) {
             $needs[$idIngredient] = [
                 'id' => $idIngredient,
                 'nom' => $nom,
-                'quantite' => 0.0,
+                'quantite' => 0,
             ];
         }
 
@@ -273,19 +273,19 @@ final class DbCommandeRepository implements CommandeRepositoryInterface
                 throw ValidationException::forField('ingredients', sprintf('ingredient %d does not exist', $need['id']));
             }
 
-            $stock = (float) $ingredient['quantite'];
-            $required = (float) $need['quantite'];
+            $stock = (int) $ingredient['quantite'];
+            $required = (int) $need['quantite'];
 
             if ($stock < $required) {
                 throw ValidationException::forField(
                     'ingredients',
-                    sprintf('stock insuffisant pour %s: %.3f requis, %.3f disponible', $need['nom'], $required, $stock),
+                    sprintf('stock insuffisant pour %s: %d requis, %d disponible', $need['nom'], $required, $stock),
                 );
             }
 
             $update->execute([
                 'id_ingredient' => $need['id'],
-                'quantite' => number_format($required, 3, '.', ''),
+                'quantite' => $required,
             ]);
         }
     }

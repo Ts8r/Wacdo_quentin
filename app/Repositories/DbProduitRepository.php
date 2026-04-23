@@ -165,7 +165,7 @@ final class DbProduitRepository implements ProductRepositoryInterface
             static fn (array $row): array => [
                 'id' => (int) $row['id'],
                 'nom' => (string) $row['nom'],
-                'quantite' => (float) $row['quantite'],
+                'quantite' => (int) $row['quantite'],
             ],
             $stmt->fetchAll(),
         );

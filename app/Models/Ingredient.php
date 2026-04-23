@@ -12,11 +12,11 @@ final class Ingredient
         public int $idIngredient = 0,
         public string $nom = '',
         public float $coutUnitaire = 0.0,
-        public float $quantite = 0.0,
+        public int $quantite = 0,
     ) {
     }
 
-    public function debiter(float $qte): void
+    public function debiter(int $qte): void
     {
         if ($qte <= 0) {
             throw ValidationException::forField('qte', 'quantity must be greater than zero');
@@ -29,7 +29,7 @@ final class Ingredient
         $this->quantite -= $qte;
     }
 
-    public function crediter(float $qte): void
+    public function crediter(int $qte): void
     {
         if ($qte <= 0) {
             throw ValidationException::forField('qte', 'quantity must be greater than zero');
@@ -38,7 +38,7 @@ final class Ingredient
         $this->quantite += $qte;
     }
 
-    public function estDisponible(float $qte): bool
+    public function estDisponible(int $qte): bool
     {
         return $qte > 0 && $this->quantite >= $qte;
     }

@@ -9,7 +9,7 @@ final class IngredientsProduits
     public function __construct(
         public int $idIngredient = 0,
         public int $idProduit = 0,
-        public float $quantite = 0.0,
+        public int $quantite = 0,
     ) {
     }
 }
