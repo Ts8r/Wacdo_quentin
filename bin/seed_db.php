@@ -69,6 +69,8 @@ $report = [
     'menus' => 0,
     'produits_categories' => 0,
     'menu_produit' => 0,
+    'ingredients' => 0,
+    'ingredients_produits' => 0,
     'images_corrigees' => [],
     'images_introuvables' => [],
     'menus_sans_produit' => [],
@@ -112,6 +114,172 @@ $fetchId = static function (PDO $pdo, string $sql, array $params): int {
     $value = $stmt->fetchColumn();
 
     return $value === false ? 0 : (int) $value;
+};
+
+$ingredientsSeed = [
+    'Pain burger' => ['cout' => 0.35, 'stock' => 500],
+    'Pain wrap' => ['cout' => 0.28, 'stock' => 350],
+    'Steak boeuf' => ['cout' => 1.20, 'stock' => 300],
+    'Poulet pane' => ['cout' => 1.10, 'stock' => 260],
+    'Poisson pane' => ['cout' => 1.05, 'stock' => 180],
+    'Bacon' => ['cout' => 0.45, 'stock' => 220],
+    'Cheddar' => ['cout' => 0.30, 'stock' => 350],
+    'Chevre' => ['cout' => 0.45, 'stock' => 180],
+    'Mozzarella' => ['cout' => 0.45, 'stock' => 180],
+    'Salade' => ['cout' => 0.20, 'stock' => 250],
+    'Tomate' => ['cout' => 0.18, 'stock' => 250],
+    'Oignon' => ['cout' => 0.12, 'stock' => 250],
+    'Cornichon' => ['cout' => 0.10, 'stock' => 250],
+    'Galette pommes de terre' => ['cout' => 0.70, 'stock' => 220],
+    'Frites' => ['cout' => 0.60, 'stock' => 500],
+    'Potatoes' => ['cout' => 0.70, 'stock' => 350],
+    'Nuggets' => ['cout' => 0.35, 'stock' => 600],
+    'Tortilla' => ['cout' => 0.25, 'stock' => 300],
+    'Sauce burger' => ['cout' => 0.15, 'stock' => 300],
+    'Sauce barbecue' => ['cout' => 0.12, 'stock' => 250],
+    'Sauce moutarde' => ['cout' => 0.12, 'stock' => 250],
+    'Sauce creamy deluxe' => ['cout' => 0.12, 'stock' => 250],
+    'Sauce ketchup' => ['cout' => 0.10, 'stock' => 300],
+    'Sauce chinoise' => ['cout' => 0.12, 'stock' => 250],
+    'Sauce curry' => ['cout' => 0.12, 'stock' => 250],
+    'Sauce pommes frites' => ['cout' => 0.12, 'stock' => 250],
+    'Boisson cola' => ['cout' => 0.45, 'stock' => 400],
+    'Boisson sans sucres' => ['cout' => 0.45, 'stock' => 250],
+    'Eau bouteille' => ['cout' => 0.25, 'stock' => 300],
+    'Boisson orange' => ['cout' => 0.45, 'stock' => 250],
+    'Ice tea peche' => ['cout' => 0.45, 'stock' => 250],
+    'Ice tea citron' => ['cout' => 0.45, 'stock' => 250],
+    'Jus orange' => ['cout' => 0.55, 'stock' => 200],
+    'Jus pomme' => ['cout' => 0.55, 'stock' => 200],
+    'Brownie' => ['cout' => 0.75, 'stock' => 140],
+    'Cheesecake' => ['cout' => 0.95, 'stock' => 120],
+    'Cookie' => ['cout' => 0.65, 'stock' => 160],
+    'Donut' => ['cout' => 0.70, 'stock' => 140],
+    'Macaron' => ['cout' => 0.40, 'stock' => 260],
+    'Glace' => ['cout' => 0.80, 'stock' => 150],
+    'Muffin' => ['cout' => 0.85, 'stock' => 130],
+    'Sundae' => ['cout' => 0.55, 'stock' => 140],
+];
+
+$recipeFor = static function (string $category, string $name): array {
+    $lowerName = strtolower($name);
+
+    if ($category === 'boissons') {
+        return match (true) {
+            str_contains($lowerName, 'sans sucres') => ['Boisson sans sucres' => 1],
+            str_contains($lowerName, 'eau') => ['Eau bouteille' => 1],
+            str_contains($lowerName, 'fanta') => ['Boisson orange' => 1],
+            str_contains($lowerName, 'pêche') || str_contains($lowerName, 'peche') => ['Ice tea peche' => 1],
+            str_contains($lowerName, 'citron') => ['Ice tea citron' => 1],
+            str_contains($lowerName, 'orange') => ['Jus orange' => 1],
+            str_contains($lowerName, 'pomme') => ['Jus pomme' => 1],
+            default => ['Boisson cola' => 1],
+        };
+    }
+
+    if ($category === 'frites') {
+        return str_contains($lowerName, 'potatoes') ? ['Potatoes' => 1] : ['Frites' => 1];
+    }
+
+    if ($category === 'sauces') {
+        return match (true) {
+            str_contains($lowerName, 'barbecue') => ['Sauce barbecue' => 1],
+            str_contains($lowerName, 'moutarde') => ['Sauce moutarde' => 1],
+            str_contains($lowerName, 'deluxe') => ['Sauce creamy deluxe' => 1],
+            str_contains($lowerName, 'ketchup') => ['Sauce ketchup' => 1],
+            str_contains($lowerName, 'chinoise') => ['Sauce chinoise' => 1],
+            str_contains($lowerName, 'curry') => ['Sauce curry' => 1],
+            default => ['Sauce pommes frites' => 1],
+        };
+    }
+
+    if ($category === 'desserts') {
+        return match (true) {
+            str_contains($lowerName, 'brownie') => ['Brownie' => 1],
+            str_contains($lowerName, 'cheesecake') => ['Cheesecake' => 1],
+            str_contains($lowerName, 'cookie') => ['Cookie' => 1],
+            str_contains($lowerName, 'donut') => ['Donut' => 1],
+            str_contains($lowerName, 'macaron') => ['Macaron' => 4],
+            str_contains($lowerName, 'fleury') => ['Glace' => 1],
+            str_contains($lowerName, 'muffin') => ['Muffin' => 1],
+            default => ['Sundae' => 1],
+        };
+    }
+
+    if ($category === 'salades') {
+        $recipe = ['Salade' => 1, 'Tomate' => 1];
+        if (str_contains($lowerName, 'cesar') || str_contains($lowerName, 'caesar')) {
+            $recipe['Poulet pane'] = 1;
+            $recipe['Sauce creamy deluxe'] = 1;
+        }
+        if (str_contains($lowerName, 'mozza')) {
+            $recipe['Mozzarella'] = 1;
+        }
+
+        return $recipe;
+    }
+
+    if ($category === 'wraps') {
+        $recipe = ['Tortilla' => 1, 'Salade' => 1, 'Tomate' => 1];
+        $recipe[str_contains($lowerName, 'chevre') ? 'Chevre' : 'Poulet pane'] = 1;
+        if (str_contains($lowerName, 'bacon')) {
+            $recipe['Bacon'] = 1;
+        }
+        $recipe['Sauce creamy deluxe'] = 1;
+
+        return $recipe;
+    }
+
+    if ($category === 'encas') {
+        if (str_contains($lowerName, 'nuggets x20')) {
+            return ['Nuggets' => 20];
+        }
+        if (str_contains($lowerName, 'nuggets')) {
+            return ['Nuggets' => 4];
+        }
+        if (str_contains($lowerName, 'croc')) {
+            return ['Pain burger' => 1, 'Cheddar' => 1, 'Sauce burger' => 1];
+        }
+
+        return ['Pain burger' => 1, 'Steak boeuf' => 1, 'Cheddar' => 1, 'Sauce burger' => 1];
+    }
+
+    $recipe = ['Pain burger' => 1, 'Sauce burger' => 1];
+
+    if (str_contains($lowerName, 'chicken') || str_contains($lowerName, 'cbo') || str_contains($lowerName, 'crispy')) {
+        $recipe['Poulet pane'] = 1;
+    } elseif (str_contains($lowerName, 'fish')) {
+        $recipe['Poisson pane'] = 1;
+    } else {
+        $recipe['Steak boeuf'] = str_contains($lowerName, '2 viandes') ? 2 : 1;
+    }
+
+    if (str_contains($lowerName, 'bacon')) {
+        $recipe['Bacon'] = 1;
+    }
+
+    if (str_contains($lowerName, 'cheese') || str_contains($lowerName, 'royal') || str_contains($lowerName, '280')) {
+        $recipe['Cheddar'] = 1;
+    }
+
+    if (str_contains($lowerName, 'cbo')) {
+        $recipe['Bacon'] = 1;
+        $recipe['Cheddar'] = 1;
+    }
+
+    $recipe['Salade'] = 1;
+    $recipe['Tomate'] = 1;
+    $recipe['Oignon'] = 1;
+
+    if (str_contains($lowerName, 'deluxe') || str_contains($lowerName, 'big mac')) {
+        $recipe['Cornichon'] = 1;
+    }
+
+    if (str_contains($lowerName, 'bbq')) {
+        $recipe['Sauce barbecue'] = 1;
+    }
+
+    return $recipe;
 };
 
 $upsertRole = $pdo->prepare(
@@ -175,6 +343,20 @@ $upsertMenuProduit = $pdo->prepare(
      ON DUPLICATE KEY UPDATE quantite = VALUES(quantite)'
 );
 
+$upsertIngredient = $pdo->prepare(
+    'INSERT INTO ingredients (nom, cout_unitaire, quantite)
+     VALUES (:nom, :cout_unitaire, :quantite)
+     ON DUPLICATE KEY UPDATE
+       cout_unitaire = VALUES(cout_unitaire),
+       quantite = VALUES(quantite)'
+);
+
+$upsertIngredientProduit = $pdo->prepare(
+    'INSERT INTO ingredients_produits (id_ingredient, id_produit, quantite)
+     VALUES (:id_ingredient, :id_produit, :quantite)
+     ON DUPLICATE KEY UPDATE quantite = VALUES(quantite)'
+);
+
 $pdo->beginTransaction();
 
 try {
@@ -202,6 +384,7 @@ try {
     }
 
     $categoryIdsByKey = [];
+    $productCategoriesById = [];
 
     foreach ($categories as $category) {
         $id = (int) ($category['id'] ?? 0);
@@ -259,6 +442,40 @@ try {
                 ]);
                 $report['produits_categories']++;
             }
+
+            $productCategoriesById[$idProduit] = (string) $categoryKey;
+        }
+    }
+
+    $ingredientIdsByName = [];
+
+    foreach ($ingredientsSeed as $name => $values) {
+        $upsertIngredient->execute([
+            'nom' => $name,
+            'cout_unitaire' => number_format((float) $values['cout'], 2, '.', ''),
+            'quantite' => number_format((float) $values['stock'], 3, '.', ''),
+        ]);
+        $ingredientIdsByName[$name] = $fetchId($pdo, 'SELECT id_ingredient FROM ingredients WHERE nom = :nom', ['nom' => $name]);
+        $report['ingredients']++;
+    }
+
+    foreach ($productIdsByName as $productName => $idProduit) {
+        $category = $productCategoriesById[$idProduit] ?? '';
+        $recipe = $recipeFor($category, $productName);
+
+        foreach ($recipe as $ingredientName => $quantity) {
+            $idIngredient = $ingredientIdsByName[$ingredientName] ?? 0;
+
+            if ($idIngredient <= 0) {
+                continue;
+            }
+
+            $upsertIngredientProduit->execute([
+                'id_ingredient' => $idIngredient,
+                'id_produit' => $idProduit,
+                'quantite' => number_format((float) $quantity, 3, '.', ''),
+            ]);
+            $report['ingredients_produits']++;
         }
     }
 
@@ -344,6 +561,8 @@ foreach ([
     'menus',
     'produits_categories',
     'menu_produit',
+    'ingredients',
+    'ingredients_produits',
 ] as $key) {
     fwrite(STDOUT, sprintf("- %s: %d\n", $key, $report[$key]));
 }

@@ -39,7 +39,7 @@ final class DbProduitRepository implements ProductRepositoryInterface
         $row = $stmt->fetch();
 
         if ($row === false) {
-            throw NotFoundException::forResource('produit', $id);
+            throw NotFoundException::forId('produit', $id);
         }
 
         return $this->hydrate($row);
@@ -138,7 +138,37 @@ final class DbProduitRepository implements ProductRepositoryInterface
         $stmt->execute(['id_produit' => $id]);
         $row = $stmt->fetch();
 
-        return $row === false ? null : $row;
+        if ($row === false) {
+            return null;
+        }
+
+        $row['ingredients'] = $this->findIngredientsForProduct($id);
+
+        return $row;
+    }
+
+    private function findIngredientsForProduct(int $idProduit): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT
+                i.id_ingredient AS id,
+                i.nom,
+                ip.quantite
+             FROM ingredients_produits ip
+             INNER JOIN ingredients i ON i.id_ingredient = ip.id_ingredient
+             WHERE ip.id_produit = :id_produit
+             ORDER BY i.nom'
+        );
+        $stmt->execute(['id_produit' => $idProduit]);
+
+        return array_map(
+            static fn (array $row): array => [
+                'id' => (int) $row['id'],
+                'nom' => (string) $row['nom'],
+                'quantite' => (float) $row['quantite'],
+            ],
+            $stmt->fetchAll(),
+        );
     }
 
     private function hydrate(array $row): Produit

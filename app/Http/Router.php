@@ -17,10 +17,12 @@ final class Router
 
     public function get(string $path, callable $handler): void
     {
-        $this->routes['GET'][] = [
-            'pattern' => $this->compile($path),
-            'handler' => $handler,
-        ];
+        $this->add('GET', $path, $handler);
+    }
+
+    public function post(string $path, callable $handler): void
+    {
+        $this->add('POST', $path, $handler);
     }
 
     public function dispatch(): void
@@ -58,5 +60,13 @@ final class Router
         $pattern = preg_replace('#\{([a-zA-Z_][a-zA-Z0-9_]*)\}#', '(?P<$1>[^/]+)', $path) ?? $path;
 
         return '#^' . $pattern . '$#';
+    }
+
+    private function add(string $method, string $path, callable $handler): void
+    {
+        $this->routes[$method][] = [
+            'pattern' => $this->compile($path),
+            'handler' => $handler,
+        ];
     }
 }
