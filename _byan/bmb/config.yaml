@@ -5,11 +5,37 @@ document_output_language: Francais
 output_folder: '{project-root}/_byan-output'
 platform: codex
 install_mode: manual
-byan_version: 1.0.0
+byan_version: 2.11.0
 installed_agents:
   - hermes
   - codex
+  - bmad-master
+  - expert-merise-agile
   - byan
+  - agent-builder
+  - module-builder
+  - workflow-builder
+  - rachid
   - drawio
+  - turbo-whisper-integration
+  - analyst
+  - pm
+  - architect
+  - dev
+  - sm
+  - quinn
+  - ux-designer
+  - tech-writer
+  - quick-flow-solo-dev
+  - tea
+  - brainstorming-coach
+  - creative-problem-solver
+  - design-thinking-coach
+  - innovation-strategist
+  - presentation-master
+  - storyteller
   - patnote
-  - kim-jung-un
+  - carmack
+  - jimmy
+  - mike
+soul_mode: creator
