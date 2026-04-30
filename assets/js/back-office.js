@@ -230,6 +230,11 @@ function renderMenuCards(menus) {
     list.innerHTML = '';
 
     menus.forEach((menu) => {
+        const prices = menu.prix_tailles || {
+            S: Math.max(0.01, Number(menu.prix) - 1),
+            M: Number(menu.prix),
+            L: Number(menu.prix) + 1,
+        };
         const card = document.createElement('article');
         card.className = 'edit-card';
         card.innerHTML = `
@@ -237,20 +242,27 @@ function renderMenuCards(menus) {
             <div>
                 <h3>${escapeHtml(menu.nom)}</h3>
                 <div class="edit-grid">
-                    <input type="number" step="0.01" min="0" value="${Number(menu.prix).toFixed(2)}" aria-label="Prix">
-                    <span></span>
+                    <input type="number" step="0.01" min="0.01" value="${Number(prices.S).toFixed(2)}" aria-label="Prix S" data-size-price="S">
+                    <input type="number" step="0.01" min="0.01" value="${Number(prices.M).toFixed(2)}" aria-label="Prix M" data-size-price="M">
+                    <input type="number" step="0.01" min="0.01" value="${Number(prices.L).toFixed(2)}" aria-label="Prix L" data-size-price="L">
                     <label><input type="checkbox" ${Number(menu.disponibilite) === 1 ? 'checked' : ''}> Disponible</label>
                     <button class="small-button" type="button">Enregistrer</button>
                 </div>
             </div>
         `;
-        const priceInput = card.querySelector('input[type="number"]');
+        const priceInputs = Array.from(card.querySelectorAll('[data-size-price]'));
         const availableInput = card.querySelector('input[type="checkbox"]');
+        priceInputs.forEach((input) => {
+            input.addEventListener('input', () => syncMenuSizePrices(input, priceInputs));
+        });
         card.querySelector('button').addEventListener('click', async () => {
+            const pricesBySize = Object.fromEntries(priceInputs.map((input) => [input.dataset.sizePrice, Number(input.value)]));
             await api(`/api/menus/${menu.id}`, {
                 method: 'PATCH',
                 body: JSON.stringify({
-                    prix: Number(priceInput.value),
+                    prix_s: pricesBySize.S,
+                    prix_m: pricesBySize.M,
+                    prix_l: pricesBySize.L,
                     disponibilite: availableInput.checked,
                 }),
             });
@@ -258,6 +270,28 @@ function renderMenuCards(menus) {
             loadCatalogue();
         });
         list.appendChild(card);
+    });
+}
+
+function syncMenuSizePrices(changedInput, inputs) {
+    const size = changedInput.dataset.sizePrice;
+    const value = Number(changedInput.value);
+
+    if (!Number.isFinite(value) || value <= 0) {
+        return;
+    }
+
+    const basePrice = size === 'S' ? value + 1 : size === 'L' ? value - 1 : value;
+    const prices = {
+        S: Math.max(0.01, basePrice - 1),
+        M: basePrice,
+        L: basePrice + 1,
+    };
+
+    inputs.forEach((input) => {
+        if (input !== changedInput) {
+            input.value = prices[input.dataset.sizePrice].toFixed(2);
+        }
     });
 }
 

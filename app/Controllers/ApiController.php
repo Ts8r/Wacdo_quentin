@@ -201,9 +201,20 @@ final class ApiController
     private function menuUpdateFields(array $data): array
     {
         $fields = [];
+        $sizePrices = [];
 
         if (array_key_exists('prix', $data)) {
             $fields['prix'] = $this->nonNegativeDecimal($data['prix'], 'prix');
+        }
+
+        foreach (['prix_s' => 'S', 'prix_m' => 'M', 'prix_l' => 'L'] as $field => $size) {
+            if (array_key_exists($field, $data)) {
+                $sizePrices[$size] = $this->nonNegativeDecimal($data[$field], $field);
+            }
+        }
+
+        if ($sizePrices !== []) {
+            $fields['prix'] = $this->baseMenuPriceFromSizePrices($sizePrices);
         }
 
         if (array_key_exists('disponibilite', $data)) {
@@ -215,6 +226,32 @@ final class ApiController
         }
 
         return $fields;
+    }
+
+    private function baseMenuPriceFromSizePrices(array $prices): float
+    {
+        $basePrice = match (true) {
+            array_key_exists('M', $prices) => $prices['M'],
+            array_key_exists('S', $prices) => $prices['S'] + 1.00,
+            array_key_exists('L', $prices) => $prices['L'] - 1.00,
+        };
+
+        $expectedPrices = [
+            'S' => max(0.01, round($basePrice - 1.00, 2)),
+            'M' => round($basePrice, 2),
+            'L' => round($basePrice + 1.00, 2),
+        ];
+
+        foreach ($prices as $size => $price) {
+            if (abs($price - $expectedPrices[$size]) > 0.001) {
+                throw ValidationException::forField(
+                    'prix_' . strtolower($size),
+                    'menu sizes must keep a 1 euro difference',
+                );
+            }
+        }
+
+        return round($basePrice, 2);
     }
 
     private function positiveId(string $id): ?int

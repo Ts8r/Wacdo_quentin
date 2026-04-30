@@ -48,10 +48,7 @@ const GROUPES_OPTIONS_MENU = {
     sizes: {
         conteneur: "options-taille-menu",
         cleEtat: "tailleMenu",
-        options: [
-            { libelle: "Menu Maxi Best Of", image: "/wacdo/images/illustration-maxi-best-of.png" },
-            { libelle: "Menu Best Of", image: "/wacdo/images/illustration-best-of.png" }
-        ]
+        options: []
     },
     sides: {
         conteneur: "options-accompagnement",
@@ -82,7 +79,7 @@ const etat = {
     produits: {},
     panier: [],
     produitSelectionne: null,
-    tailleMenu: "Menu Maxi Best Of",
+    tailleMenu: "M",
     accompagnement: "Frites",
     boissonMenu: "Coca Cola",
     tailleBoisson: "30Cl",
@@ -154,6 +151,7 @@ function normaliserCatalogueApi(catalogue) {
         id: menu.id,
         nom: menu.nom,
         prix: menu.prix,
+        prixTailles: menu.prix_tailles,
         image: menu.image,
     }));
 
@@ -168,6 +166,7 @@ function normaliserCatalogueProduits(catalogue) {
                 id: produit.id,
                 nom: produit.nom,
                 prix: Number(produit.prix),
+                prixTailles: produit.prixTailles ?? null,
                 image: normaliserCheminImage(produit.image),
                 estBoisson: categoryId === "boissons"
             }))
@@ -368,15 +367,36 @@ function creerLignePanier(produit, surcharges = {}) {
 
 function preparerModaleMenu(produit) {
     etat.produitSelectionne = produit;
-    etat.tailleMenu = "Menu Maxi Best Of";
+    etat.tailleMenu = "M";
     etat.accompagnement = "Frites";
     etat.boissonMenu = "Coca Cola";
 
     Object.values(GROUPES_OPTIONS_MENU).forEach((groupe) => {
-        afficherCartesOptions(groupe.conteneur, groupe.options, etat[groupe.cleEtat]);
+        const options = groupe.cleEtat === "tailleMenu" ? optionsTaillesMenu(produit) : groupe.options;
+        afficherCartesOptions(groupe.conteneur, options, etat[groupe.cleEtat]);
     });
 
     ouvrirModale("#modale-menu");
+}
+
+function optionsTaillesMenu(produit) {
+    const prixTailles = prixTaillesMenu(produit);
+
+    return [
+        { libelle: "S", description: `Menu S - ${formaterPrix(prixTailles.S)}`, image: "/wacdo/images/illustration-best-of.png" },
+        { libelle: "M", description: `Menu M - ${formaterPrix(prixTailles.M)}`, image: "/wacdo/images/illustration-best-of.png" },
+        { libelle: "L", description: `Menu L - ${formaterPrix(prixTailles.L)}`, image: "/wacdo/images/illustration-maxi-best-of.png" }
+    ];
+}
+
+function prixTaillesMenu(produit) {
+    const prixM = Number(produit.prix);
+
+    return {
+        S: Number(produit.prixTailles?.S ?? Math.max(0.01, prixM - 1)),
+        M: Number(produit.prixTailles?.M ?? prixM),
+        L: Number(produit.prixTailles?.L ?? prixM + 1)
+    };
 }
 
 function preparerModaleBoisson(produit) {
@@ -398,20 +418,20 @@ function afficherCartesOptions(idConteneur, options, selection) {
     conteneur.innerHTML = options.map((option) => `
         <button class="carte-option ${option.libelle === selection ? "est-selectionne" : ""}" type="button" data-valeur="${option.libelle}">
             ${option.image ? `<img src="${echapperHtml(option.image)}" alt="">` : ""}
-            <span>${echapperHtml(option.libelle)}</span>
+            <span>${echapperHtml(option.description || option.libelle)}</span>
         </button>
     `).join("");
 }
 
 function ajouterMenuConfigure() {
     const produit = etat.produitSelectionne;
-    const supplement = etat.tailleMenu === "Menu Maxi Best Of" ? 1.50 : 0;
+    const prixMenu = prixTaillesMenu(produit)[etat.tailleMenu] ?? Number(produit.prix);
 
     ajouterAuPanier(creerLignePanier(produit, {
         type: "menus",
-        nom: `${etat.tailleMenu} ${produit.nom.replace(/^Menu\s/, "")}`,
-        prix: produit.prix + supplement,
-        taille: etat.tailleMenu === "Menu Maxi Best Of" ? "L" : "M",
+        nom: `Menu ${etat.tailleMenu} ${produit.nom.replace(/^Menu\s/, "")}`,
+        prix: prixMenu,
+        taille: etat.tailleMenu,
         options: [etat.accompagnement.toLowerCase(), etat.boissonMenu.toLowerCase(), "ketchup", "sauce deluxe"]
     }));
     fermerModales();

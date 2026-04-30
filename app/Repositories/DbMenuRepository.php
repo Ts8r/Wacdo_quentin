@@ -132,7 +132,18 @@ final class DbMenuRepository
 
     private function formatMenuImage(array &$menu): void
     {
+        $menu['prix'] = (float) $menu['prix'];
+        $menu['prix_tailles'] = $this->pricesBySize($menu['prix']);
         $menu['image'] = ImageData::dataUri($menu['image'] ?? null, $menu['image_mime'] ?? null);
         unset($menu['image_mime']);
+    }
+
+    private function pricesBySize(float $basePrice): array
+    {
+        return [
+            'S' => max(0.01, round($basePrice - 1.00, 2)),
+            'M' => round($basePrice, 2),
+            'L' => round($basePrice + 1.00, 2),
+        ];
     }
 }
