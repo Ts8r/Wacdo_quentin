@@ -8,12 +8,56 @@ use App\Exceptions\ValidationException;
 use App\Http\JsonRequest;
 use App\Http\JsonResponse;
 use App\Repositories\DbCommandeRepository;
+use App\Security\SessionAuthGuard;
 use Throwable;
 
 final class CommandeController
 {
-    public function __construct(private readonly DbCommandeRepository $commandes)
+    private const DEFAULT_LIMIT = 50;
+    private const MAX_LIMIT = 100;
+    private const BACK_OFFICE_ROLES = ['EMPLOYE', 'MANAGER', 'ADMIN'];
+
+    public function __construct(
+        private readonly DbCommandeRepository $commandes,
+        private readonly ?SessionAuthGuard $authGuard = null,
+    ) {
+    }
+
+    public function index(): void
     {
+        if (!$this->canAccessBackOffice()) {
+            return;
+        }
+
+        try {
+            $statut = $this->optionalFilter($_GET['statut'] ?? null);
+            $canal = $this->optionalFilter($_GET['canal'] ?? null);
+            $limit = $this->boundedInteger($_GET['limit'] ?? self::DEFAULT_LIMIT, 'limit', 1, self::MAX_LIMIT);
+            $offset = $this->boundedInteger($_GET['offset'] ?? 0, 'offset', 0, PHP_INT_MAX);
+
+            JsonResponse::send([
+                'data' => $this->commandes->findAllForApi($statut, $canal, $limit, $offset),
+                'meta' => [
+                    'total' => $this->commandes->countForApi($statut, $canal),
+                    'limit' => $limit,
+                    'offset' => $offset,
+                    'filters' => [
+                        'statut' => $statut,
+                        'canal' => $canal,
+                    ],
+                ],
+            ]);
+        } catch (ValidationException $exception) {
+            JsonResponse::send([
+                'error' => 'validation_failed',
+                'message' => $exception->getMessage(),
+            ], 422);
+        } catch (Throwable $exception) {
+            JsonResponse::send([
+                'error' => 'server_error',
+                'message' => $exception->getMessage(),
+            ], 500);
+        }
     }
 
     public function create(): void
@@ -29,6 +73,85 @@ final class CommandeController
             );
 
             JsonResponse::send(['data' => $commande], 201);
+        } catch (ValidationException $exception) {
+            JsonResponse::send([
+                'error' => 'validation_failed',
+                'message' => $exception->getMessage(),
+            ], 422);
+        } catch (Throwable $exception) {
+            JsonResponse::send([
+                'error' => 'server_error',
+                'message' => $exception->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function show(string $id): void
+    {
+        if (!$this->canAccessBackOffice()) {
+            return;
+        }
+
+        $idCmd = (int) $id;
+
+        if ($idCmd <= 0) {
+            JsonResponse::send([
+                'error' => 'validation_failed',
+                'message' => 'Validation failed for "id": must be a positive integer.',
+            ], 422);
+            return;
+        }
+
+        try {
+            $commande = $this->commandes->findOneForApi($idCmd);
+
+            if ($commande === null) {
+                JsonResponse::send([
+                    'error' => 'not_found',
+                    'message' => 'Commande introuvable.',
+                ], 404);
+                return;
+            }
+
+            JsonResponse::send(['data' => $commande]);
+        } catch (Throwable $exception) {
+            JsonResponse::send([
+                'error' => 'server_error',
+                'message' => $exception->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function updateStatus(string $id): void
+    {
+        if (!$this->canAccessBackOffice()) {
+            return;
+        }
+
+        $idCmd = (int) $id;
+
+        if ($idCmd <= 0) {
+            JsonResponse::send([
+                'error' => 'validation_failed',
+                'message' => 'Validation failed for "id": must be a positive integer.',
+            ], 422);
+            return;
+        }
+
+        try {
+            $data = JsonRequest::body();
+            $statut = $this->requiredStatus($data);
+            $commande = $this->commandes->updateStatusForApi($idCmd, $statut);
+
+            if ($commande === null) {
+                JsonResponse::send([
+                    'error' => 'not_found',
+                    'message' => 'Commande introuvable.',
+                ], 404);
+                return;
+            }
+
+            JsonResponse::send(['data' => $commande]);
         } catch (ValidationException $exception) {
             JsonResponse::send([
                 'error' => 'validation_failed',
@@ -66,6 +189,17 @@ final class CommandeController
         }
 
         return $canal;
+    }
+
+    private function requiredStatus(array $data): string
+    {
+        $statut = strtolower(trim((string) ($data['statut'] ?? '')));
+
+        if ($statut === '') {
+            throw ValidationException::forField('statut', 'field is required');
+        }
+
+        return $statut;
     }
 
     private function normalizeLines(mixed $lines, string $field): array
@@ -115,5 +249,44 @@ final class CommandeController
         }
 
         return array_values($normalized);
+    }
+
+    private function optionalFilter(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $filter = trim((string) $value);
+
+        return $filter === '' ? null : strtolower($filter);
+    }
+
+    private function boundedInteger(mixed $value, string $field, int $min, int $max): int
+    {
+        if (filter_var($value, FILTER_VALIDATE_INT) === false) {
+            throw ValidationException::forField($field, 'must be an integer');
+        }
+
+        $integer = (int) $value;
+
+        if ($integer < $min || $integer > $max) {
+            throw ValidationException::forField($field, sprintf('must be between %d and %d', $min, $max));
+        }
+
+        return $integer;
+    }
+
+    private function canAccessBackOffice(): bool
+    {
+        if ($this->authGuard === null) {
+            JsonResponse::send([
+                'error' => 'server_error',
+                'message' => 'Auth guard is not configured.',
+            ], 500);
+            return false;
+        }
+
+        return $this->authGuard->requireRoles(self::BACK_OFFICE_ROLES) !== null;
     }
 }

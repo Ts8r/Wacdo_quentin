@@ -13,6 +13,14 @@ use PDO;
 
 final class DbCommandeRepository implements CommandeRepositoryInterface
 {
+    private const STATUS_TRANSITIONS = [
+        'en_attente' => ['en_preparation', 'annulee'],
+        'en_preparation' => ['prete', 'annulee'],
+        'prete' => ['servie', 'annulee'],
+        'servie' => [],
+        'annulee' => [],
+    ];
+
     public function __construct(private PDO $pdo)
     {
     }
@@ -58,6 +66,11 @@ final class DbCommandeRepository implements CommandeRepositoryInterface
             ]);
 
             $commande = $this->findOneForApi($idCmd);
+
+            if ($commande === null) {
+                throw ValidationException::forField('commande', 'created command cannot be found');
+            }
+
             $this->pdo->commit();
 
             return $commande;
@@ -68,6 +81,64 @@ final class DbCommandeRepository implements CommandeRepositoryInterface
 
             throw $exception;
         }
+    }
+
+    public function findAllForApi(?string $statut, ?string $canal, int $limit, int $offset): array
+    {
+        [$whereSql, $params] = $this->buildListFilters($statut, $canal);
+
+        $stmt = $this->pdo->prepare(
+            'SELECT
+                c.id_cmd AS id,
+                c.id_user,
+                c.numero_ticket,
+                c.date_cmd,
+                c.total_ttc,
+                s.id_statut,
+                s.libelle AS statut,
+                ca.id_canal,
+                ca.libelle AS canal,
+                u.nom AS user_nom,
+                u.prenom AS user_prenom,
+                u.email AS user_email,
+                u.num_tel AS user_num_tel
+             FROM commandes c
+             INNER JOIN statuts_commandes s ON s.id_statut = c.id_statut
+             INNER JOIN canaux ca ON ca.id_canal = c.id_canal
+             LEFT JOIN utilisateurs u ON u.id_user = c.id_user
+             ' . $whereSql . '
+             ORDER BY c.date_cmd DESC, c.id_cmd DESC
+             LIMIT :limit OFFSET :offset'
+        );
+
+        foreach ($params as $key => $value) {
+            $stmt->bindValue(':' . $key, $value);
+        }
+
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return array_map(
+            fn (array $commande): array => $this->formatCommandForApi($commande),
+            $stmt->fetchAll(),
+        );
+    }
+
+    public function countForApi(?string $statut, ?string $canal): int
+    {
+        [$whereSql, $params] = $this->buildListFilters($statut, $canal);
+
+        $stmt = $this->pdo->prepare(
+            'SELECT COUNT(*)
+             FROM commandes c
+             INNER JOIN statuts_commandes s ON s.id_statut = c.id_statut
+             INNER JOIN canaux ca ON ca.id_canal = c.id_canal
+             ' . $whereSql
+        );
+        $stmt->execute($params);
+
+        return (int) $stmt->fetchColumn();
     }
 
     public function findById(int $id): Commande
@@ -98,6 +169,67 @@ final class DbCommandeRepository implements CommandeRepositoryInterface
     public function updateStatut(int $idCmd, int $idStatut): bool
     {
         throw new BadMethodCallException('DbCommandeRepository::updateStatut() must be implemented with PDO queries.');
+    }
+
+    public function updateStatusForApi(int $idCmd, string $newStatus): ?array
+    {
+        $commande = $this->findCommandeRowForStatus($idCmd);
+
+        if ($commande === null) {
+            return null;
+        }
+
+        $currentStatus = (string) $commande['statut'];
+        $newStatus = strtolower(trim($newStatus));
+
+        if ($newStatus === '') {
+            throw ValidationException::forField('statut', 'field is required');
+        }
+
+        $allowedTransitions = self::STATUS_TRANSITIONS[$currentStatus] ?? [];
+
+        if (!in_array($newStatus, $allowedTransitions, true)) {
+            throw ValidationException::forField(
+                'statut',
+                sprintf('transition impossible de %s vers %s', $currentStatus, $newStatus),
+            );
+        }
+
+        $statusRow = $this->findStatutByLibelle($newStatus);
+
+        $this->pdo->beginTransaction();
+
+        try {
+            if ($newStatus === 'annulee') {
+                $this->creditIngredientsForOrder($idCmd);
+            }
+
+            $stmt = $this->pdo->prepare(
+                'UPDATE commandes
+                 SET id_statut = :id_statut
+                 WHERE id_cmd = :id_cmd'
+            );
+            $stmt->execute([
+                'id_statut' => (int) $statusRow['id_statut'],
+                'id_cmd' => $idCmd,
+            ]);
+
+            $updated = $this->findOneForApi($idCmd);
+
+            if ($updated === null) {
+                throw ValidationException::forField('commande', 'updated command cannot be found');
+            }
+
+            $this->pdo->commit();
+
+            return $updated;
+        } catch (\Throwable $exception) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+
+            throw $exception;
+        }
     }
 
     private function insertProductLines(int $idCmd, array $produits): array
@@ -290,7 +422,44 @@ final class DbCommandeRepository implements CommandeRepositoryInterface
         }
     }
 
-    private function findOneForApi(int $idCmd): array
+    private function creditIngredients(array $needs): void
+    {
+        if ($needs === []) {
+            return;
+        }
+
+        $select = $this->pdo->prepare(
+            'SELECT 1
+             FROM ingredients
+             WHERE id_ingredient = :id_ingredient
+             FOR UPDATE'
+        );
+        $update = $this->pdo->prepare(
+            'UPDATE ingredients
+             SET quantite = quantite + :quantite
+             WHERE id_ingredient = :id_ingredient'
+        );
+
+        foreach ($needs as $need) {
+            $select->execute(['id_ingredient' => $need['id']]);
+
+            if ($select->fetchColumn() === false) {
+                throw ValidationException::forField('ingredients', sprintf('ingredient %d does not exist', $need['id']));
+            }
+
+            $update->execute([
+                'id_ingredient' => $need['id'],
+                'quantite' => (int) $need['quantite'],
+            ]);
+        }
+    }
+
+    private function creditIngredientsForOrder(int $idCmd): void
+    {
+        $this->creditIngredients($this->collectIngredientNeedsFromExistingOrder($idCmd));
+    }
+
+    public function findOneForApi(int $idCmd): ?array
     {
         $stmt = $this->pdo->prepare(
             'SELECT
@@ -302,22 +471,100 @@ final class DbCommandeRepository implements CommandeRepositoryInterface
                 s.id_statut,
                 s.libelle AS statut,
                 ca.id_canal,
-                ca.libelle AS canal
+                ca.libelle AS canal,
+                u.nom AS user_nom,
+                u.prenom AS user_prenom,
+                u.email AS user_email,
+                u.num_tel AS user_num_tel
              FROM commandes c
              INNER JOIN statuts_commandes s ON s.id_statut = c.id_statut
              INNER JOIN canaux ca ON ca.id_canal = c.id_canal
+             LEFT JOIN utilisateurs u ON u.id_user = c.id_user
              WHERE c.id_cmd = :id_cmd'
         );
         $stmt->execute(['id_cmd' => $idCmd]);
         $commande = $stmt->fetch();
 
         if ($commande === false) {
-            throw ValidationException::forField('commande', 'created command cannot be found');
+            return null;
+        }
+
+        return $this->formatCommandForApi($commande);
+    }
+
+    private function findCommandeRowForStatus(int $idCmd): ?array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT
+                c.id_cmd AS id,
+                s.libelle AS statut
+             FROM commandes c
+             INNER JOIN statuts_commandes s ON s.id_statut = c.id_statut
+             WHERE c.id_cmd = :id_cmd'
+        );
+        $stmt->execute(['id_cmd' => $idCmd]);
+        $row = $stmt->fetch();
+
+        return $row === false ? null : $row;
+    }
+
+    private function buildListFilters(?string $statut, ?string $canal): array
+    {
+        $where = [];
+        $params = [];
+
+        if ($statut !== null && $statut !== '') {
+            $where[] = 's.libelle = :statut';
+            $params['statut'] = $statut;
+        }
+
+        if ($canal !== null && $canal !== '') {
+            $where[] = 'ca.libelle = :canal';
+            $params['canal'] = $canal;
         }
 
         return [
-            'id' => (int) $commande['id'],
-            'id_user' => $commande['id_user'] === null ? null : (int) $commande['id_user'],
+            $where === [] ? '' : 'WHERE ' . implode(' AND ', $where),
+            $params,
+        ];
+    }
+
+    private function collectIngredientNeedsFromExistingOrder(int $idCmd): array
+    {
+        $needs = [];
+
+        $productStmt = $this->pdo->prepare(
+            'SELECT id_produit, quantite
+             FROM commande_produit
+             WHERE id_cmd = :id_cmd'
+        );
+        $productStmt->execute(['id_cmd' => $idCmd]);
+
+        foreach ($productStmt->fetchAll() as $line) {
+            $this->addProductIngredientNeeds($needs, (int) $line['id_produit'], (int) $line['quantite']);
+        }
+
+        $menuStmt = $this->pdo->prepare(
+            'SELECT id_menu, quantite
+             FROM commande_menu
+             WHERE id_cmd = :id_cmd'
+        );
+        $menuStmt->execute(['id_cmd' => $idCmd]);
+
+        foreach ($menuStmt->fetchAll() as $line) {
+            $this->addMenuIngredientNeeds($needs, (int) $line['id_menu'], (int) $line['quantite']);
+        }
+
+        return $needs;
+    }
+
+    private function formatCommandForApi(array $commande): array
+    {
+        $idCmd = (int) $commande['id'];
+
+        return [
+            'id' => $idCmd,
+            'utilisateur' => $this->formatUserForApi($commande),
             'numero_ticket' => (string) $commande['numero_ticket'],
             'date_cmd' => (string) $commande['date_cmd'],
             'total_ttc' => (float) $commande['total_ttc'],
@@ -331,6 +578,21 @@ final class DbCommandeRepository implements CommandeRepositoryInterface
             ],
             'produits' => $this->findProductLinesForApi($idCmd),
             'menus' => $this->findMenuLinesForApi($idCmd),
+        ];
+    }
+
+    private function formatUserForApi(array $commande): ?array
+    {
+        if ($commande['id_user'] === null) {
+            return null;
+        }
+
+        return [
+            'id' => (int) $commande['id_user'],
+            'nom' => (string) $commande['user_nom'],
+            'prenom' => (string) $commande['user_prenom'],
+            'email' => (string) $commande['user_email'],
+            'num_tel' => $commande['user_num_tel'] === null ? null : (string) $commande['user_num_tel'],
         ];
     }
 
