@@ -79,6 +79,8 @@ const etat = {
     produits: {},
     panier: [],
     produitSelectionne: null,
+    commandeEnCours: false,
+    commandeFinalisee: null,
     tailleMenu: "M",
     accompagnement: "Frites",
     boissonMenu: "Coca Cola",
@@ -95,6 +97,12 @@ const elements = {
     listePanier: document.querySelector("#liste-panier"),
     total: document.querySelector("#panier-total"),
     modeTicket: document.querySelector("#mode-ticket"),
+    numeroCommande: document.querySelector("#numero-commande"),
+    messageCommande: document.querySelector("#message-commande"),
+    boutonPayer: document.querySelector("#payer-commande"),
+    boutonTable: document.querySelector("#enregistrer-table"),
+    ticketFinal: document.querySelector("#ticket-final"),
+    totalFinal: document.querySelector("#total-final"),
     quantiteBoisson: document.querySelector("#quantite-boisson")
 };
 
@@ -309,7 +317,7 @@ function afficherProduits() {
 }
 
 function afficherPanier() {
-    elements.modeTicket.textContent = `${etat.mode} : 326`;
+    elements.modeTicket.textContent = etat.mode;
 
     if (etat.panier.length === 0) {
         elements.listePanier.innerHTML = `<li class="panier-vide">Votre commande est vide</li>`;
@@ -350,6 +358,7 @@ function totalPanier() {
 
 function ajouterAuPanier(ligne) {
     etat.panier.push(ligne);
+    effacerMessageCommande();
     afficherPanier();
 }
 
@@ -456,7 +465,10 @@ function modifierQuantiteBoisson(step) {
 
 function reinitialiserCommande() {
     etat.panier = [];
+    etat.commandeFinalisee = null;
     etat.categorieActive = "menus";
+    elements.numeroCommande.textContent = "--";
+    effacerMessageCommande();
     afficherOnglets();
     afficherProduits();
     afficherPanier();
@@ -465,6 +477,7 @@ function reinitialiserCommande() {
 
 async function commencerPaiement() {
     if (etat.panier.length === 0) {
+        afficherMessageCommande("Ajoutez au moins un produit avant de payer.", "info");
         return;
     }
 
@@ -473,14 +486,35 @@ async function commencerPaiement() {
         return;
     }
 
-    await envoyerCommande();
-    afficherEcran("#remerciement-ecran");
+    await validerCommande();
 }
 
 async function terminerCommande() {
-    fermerModales();
-    await envoyerCommande();
-    afficherEcran("#remerciement-ecran");
+    await validerCommande();
+}
+
+async function validerCommande() {
+    if (etat.commandeEnCours) {
+        return;
+    }
+
+    etat.commandeEnCours = true;
+    mettreAJourEtatEnvoi();
+    effacerMessageCommande();
+
+    try {
+        const commande = await envoyerCommande();
+        etat.commandeFinalisee = commande;
+        afficherConfirmationCommande(commande);
+        fermerModales();
+        afficherEcran("#remerciement-ecran");
+    } catch (error) {
+        fermerModales();
+        afficherMessageCommande(messageErreurCommande(error), "erreur");
+    } finally {
+        etat.commandeEnCours = false;
+        mettreAJourEtatEnvoi();
+    }
 }
 
 async function envoyerCommande() {
@@ -508,6 +542,54 @@ async function envoyerCommande() {
         const erreur = await reponse.json().catch(() => ({}));
         throw new Error(erreur.message || `HTTP ${reponse.status}`);
     }
+
+    const donnees = await reponse.json();
+
+    return donnees.data ?? donnees;
+}
+
+function afficherConfirmationCommande(commande) {
+    const ticket = commande.numero_ticket || "--";
+    const total = Number(commande.total_ttc ?? totalPanier());
+
+    elements.numeroCommande.textContent = ticket.slice(-3);
+    elements.ticketFinal.textContent = ticket;
+    elements.totalFinal.textContent = formaterPrix(total);
+}
+
+function afficherMessageCommande(message, type) {
+    elements.messageCommande.textContent = message;
+    elements.messageCommande.className = `message-commande est-visible est-${type}`;
+}
+
+function effacerMessageCommande() {
+    elements.messageCommande.textContent = "";
+    elements.messageCommande.className = "message-commande";
+}
+
+function mettreAJourEtatEnvoi() {
+    elements.boutonPayer.disabled = etat.commandeEnCours;
+    elements.boutonTable.disabled = etat.commandeEnCours;
+    elements.boutonPayer.textContent = etat.commandeEnCours ? "Envoi..." : "Payer";
+    elements.boutonTable.textContent = etat.commandeEnCours ? "Envoi..." : "Enregistrer le numéro";
+}
+
+function messageErreurCommande(error) {
+    const message = String(error?.message || "");
+
+    if (message.includes("stock insuffisant")) {
+        return message.charAt(0).toUpperCase() + message.slice(1) + ".";
+    }
+
+    if (message.includes("Failed to fetch") || message.includes("NetworkError")) {
+        return "Impossible de contacter le serveur. Réessayez dans un instant.";
+    }
+
+    if (message.startsWith("Validation failed")) {
+        return "La commande n'a pas pu être validée. Vérifiez votre panier.";
+    }
+
+    return message || "La commande n'a pas pu être envoyée. Réessayez dans un instant.";
 }
 
 function selectionnerOption(idConteneur, valeur) {

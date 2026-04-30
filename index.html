@@ -46,7 +46,7 @@
                             <h2>Commande numéro</h2>
                             <div class="mode-ticket" id="mode-ticket">Sur place : 326</div>
                         </div>
-                        <div class="numero-commande">72</div>
+                        <div class="numero-commande" id="numero-commande">--</div>
                     </div>
                     <ul class="liste-panier" id="liste-panier"></ul>
                     <div>
@@ -58,6 +58,7 @@
                             <button class="bouton danger" type="button" id="abandon-commande">Abandon</button>
                             <button class="bouton" type="button" id="payer-commande">Payer</button>
                         </div>
+                        <p class="message-commande" id="message-commande" role="status" aria-live="polite"></p>
                     </div>
                 </aside>
             </div>
@@ -66,6 +67,8 @@
         <section class="ecran remerciement" id="remerciement-ecran" aria-label="Fin de commande">
             <div class="panneau-remerciement">
                 <h1>Toute l'équipe vous remercie,</h1>
+                <p class="ticket-final">Commande <strong id="ticket-final">--</strong></p>
+                <p class="total-final">Total <strong id="total-final">0,00€</strong></p>
                 <p>Et vous souhaite un bon appétit dans nos restaurants,</p>
                 <p>A bientôt !</p>
                 <button class="bouton" type="button" id="nouvelle-commande">Nouvelle commande</button>
