@@ -35,7 +35,13 @@ $columnExists = static function (PDO $pdo, string $table, string $column): bool 
 
 foreach (['categories', 'produits', 'menus'] as $table) {
     if (!$columnExists($pdo, $table, 'image')) {
-        $pdo->exec(sprintf('ALTER TABLE `%s` ADD COLUMN image VARCHAR(255) NULL', $table));
+        $pdo->exec(sprintf('ALTER TABLE `%s` ADD COLUMN image MEDIUMBLOB NULL', $table));
+    } else {
+        $pdo->exec(sprintf('ALTER TABLE `%s` MODIFY image MEDIUMBLOB NULL', $table));
+    }
+
+    if (!$columnExists($pdo, $table, 'image_mime')) {
+        $pdo->exec(sprintf('ALTER TABLE `%s` ADD COLUMN image_mime VARCHAR(80) NULL AFTER image', $table));
     }
 }
 
@@ -76,36 +82,75 @@ $report = [
     'menus_sans_produit' => [],
 ];
 
-$normalizeImage = static function (string $image) use ($projectRoot, &$report): string {
+$resolveImagePath = static function (string $image) use ($projectRoot, &$report): ?string {
     $image = trim($image);
 
     if ($image === '') {
-        return '';
+        return null;
     }
 
-    $candidates = [$image];
+    $normalized = ltrim($image, '/');
+    $normalized = str_starts_with($normalized, 'wacdo/')
+        ? substr($normalized, strlen('wacdo/'))
+        : $normalized;
 
-    if (str_ends_with($image, '.png.png')) {
-        $candidates[] = substr($image, 0, -4);
+    $candidates = ['/' . $normalized];
+
+    if (str_ends_with($normalized, '.png.png')) {
+        $candidates[] = '/' . substr($normalized, 0, -4);
     }
 
-    if (str_ends_with($image, '.jpg.png')) {
-        $candidates[] = substr($image, 0, -8) . '.png';
+    if (str_ends_with($normalized, '.jpg.png')) {
+        $candidates[] = '/' . substr($normalized, 0, -8) . '.png';
     }
 
     foreach (array_unique($candidates) as $candidate) {
-        if (is_file($projectRoot . '/wacdo' . $candidate)) {
+        $path = $projectRoot . '/wacdo' . $candidate;
+
+        if (is_file($path)) {
             if ($candidate !== $image) {
                 $report['images_corrigees'][] = "{$image} -> {$candidate}";
             }
 
-            return $candidate;
+            return $path;
         }
     }
 
     $report['images_introuvables'][] = $image;
 
-    return $image;
+    return null;
+};
+
+$loadImage = static function (string $image) use ($resolveImagePath): array {
+    $path = $resolveImagePath($image);
+
+    if ($path === null) {
+        return [
+            'data' => null,
+            'mime' => null,
+        ];
+    }
+
+    $data = file_get_contents($path);
+
+    if ($data === false) {
+        return [
+            'data' => null,
+            'mime' => null,
+        ];
+    }
+
+    $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+    $mime = match ($extension) {
+        'jpg', 'jpeg' => 'image/jpeg',
+        'webp' => 'image/webp',
+        default => 'image/png',
+    };
+
+    return [
+        'data' => $data,
+        'mime' => $mime,
+    ];
 };
 
 $fetchId = static function (PDO $pdo, string $sql, array $params): int {
@@ -301,33 +346,36 @@ $upsertCanal = $pdo->prepare(
 );
 
 $upsertCategorie = $pdo->prepare(
-    'INSERT INTO categories (id_cat, type, image, description)
-     VALUES (:id_cat, :type, :image, :description)
+    'INSERT INTO categories (id_cat, type, image, image_mime, description)
+     VALUES (:id_cat, :type, :image, :image_mime, :description)
      ON DUPLICATE KEY UPDATE
        type = VALUES(type),
        image = VALUES(image),
+       image_mime = VALUES(image_mime),
        description = VALUES(description)'
 );
 
 $upsertProduit = $pdo->prepare(
-    'INSERT INTO produits (id_produit, nom, description, prix_unitaire, image, disponibilite, quantite)
-     VALUES (:id_produit, :nom, :description, :prix_unitaire, :image, :disponibilite, :quantite)
+    'INSERT INTO produits (id_produit, nom, description, prix_unitaire, image, image_mime, disponibilite, quantite)
+     VALUES (:id_produit, :nom, :description, :prix_unitaire, :image, :image_mime, :disponibilite, :quantite)
      ON DUPLICATE KEY UPDATE
        nom = VALUES(nom),
        description = VALUES(description),
        prix_unitaire = VALUES(prix_unitaire),
        image = VALUES(image),
+       image_mime = VALUES(image_mime),
        disponibilite = VALUES(disponibilite),
        quantite = VALUES(quantite)'
 );
 
 $upsertMenu = $pdo->prepare(
-    'INSERT INTO menus (id_menu, nom, prix, image, disponibilite)
-     VALUES (:id_menu, :nom, :prix, :image, :disponibilite)
+    'INSERT INTO menus (id_menu, nom, prix, image, image_mime, disponibilite)
+     VALUES (:id_menu, :nom, :prix, :image, :image_mime, :disponibilite)
      ON DUPLICATE KEY UPDATE
        nom = VALUES(nom),
        prix = VALUES(prix),
        image = VALUES(image),
+       image_mime = VALUES(image_mime),
        disponibilite = VALUES(disponibilite)'
 );
 
@@ -394,10 +442,13 @@ try {
             continue;
         }
 
+        $image = $loadImage((string) ($category['image'] ?? ''));
+
         $upsertCategorie->execute([
             'id_cat' => $id,
             'type' => $type,
-            'image' => $normalizeImage((string) ($category['image'] ?? '')),
+            'image' => $image['data'],
+            'image_mime' => $image['mime'],
             'description' => ucfirst($type),
         ]);
 
@@ -422,12 +473,15 @@ try {
                 continue;
             }
 
+            $image = $loadImage((string) ($item['image'] ?? ''));
+
             $upsertProduit->execute([
                 'id_produit' => $idProduit,
                 'nom' => $nom,
                 'description' => ucfirst((string) $categoryKey),
                 'prix_unitaire' => number_format((float) ($item['prix'] ?? 0), 2, '.', ''),
-                'image' => $normalizeImage((string) ($item['image'] ?? '')),
+                'image' => $image['data'],
+                'image_mime' => $image['mime'],
                 'disponibilite' => 1,
                 'quantite' => 100,
             ]);
@@ -487,11 +541,14 @@ try {
             continue;
         }
 
+        $image = $loadImage((string) ($menu['image'] ?? ''));
+
         $upsertMenu->execute([
             'id_menu' => $idMenu,
             'nom' => $nom,
             'prix' => number_format((float) ($menu['prix'] ?? 0), 2, '.', ''),
-            'image' => $normalizeImage((string) ($menu['image'] ?? '')),
+            'image' => $image['data'],
+            'image_mime' => $image['mime'],
             'disponibilite' => 1,
         ]);
         $report['menus']++;

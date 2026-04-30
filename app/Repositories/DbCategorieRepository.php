@@ -19,11 +19,20 @@ final class DbCategorieRepository
                 id_cat AS id,
                 type,
                 image,
+                image_mime,
                 description
              FROM categories
              ORDER BY id_cat'
         );
 
-        return $stmt->fetchAll();
+        return array_map(
+            static fn (array $row): array => [
+                'id' => (int) $row['id'],
+                'type' => (string) $row['type'],
+                'image' => ImageData::dataUri($row['image'] ?? null, $row['image_mime'] ?? null),
+                'description' => $row['description'] === null ? null : (string) $row['description'],
+            ],
+            $stmt->fetchAll(),
+        );
     }
 }

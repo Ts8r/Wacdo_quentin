@@ -1,14 +1,14 @@
         :root {
-            --yellow: #ffc629;
-            --yellow-dark: #f2b407;
-            --ink: #171717;
-            --muted: #6f6f6f;
-            --line: #dedede;
-            --panel: #ffffff;
+            --jaune: #ffc629;
+            --jaune-fonce: #f2b407;
+            --encre: #171717;
+            --texte-discret: #6f6f6f;
+            --ligne: #dedede;
+            --panneau: #ffffff;
             --page: #f7f7f7;
             --danger: #c21f28;
-            --success: #178f4f;
-            --shadow: 0 18px 35px rgba(0, 0, 0, 0.16);
+            --succes: #178f4f;
+            --ombre: 0 18px 35px rgba(0, 0, 0, 0.16);
             font-family: "Source Sans Pro", Arial, Helvetica, sans-serif;
         }
 
@@ -19,7 +19,7 @@
         body {
             margin: 0;
             min-height: 100vh;
-            color: var(--ink);
+            color: var(--encre);
             background: var(--page);
         }
 
@@ -39,21 +39,21 @@
             max-width: 100%;
         }
 
-        .app {
+        .application {
             min-height: 100vh;
             overflow: hidden;
         }
 
-        .screen {
+        .ecran {
             display: none;
             min-height: 100vh;
         }
 
-        .screen.is-active {
+        .ecran.est-actif {
             display: flex;
         }
 
-        .welcome {
+        .accueil {
             align-items: center;
             justify-content: center;
             padding: 7vh 4vw;
@@ -64,22 +64,22 @@
                 #f2f2f2;
         }
 
-        .choice-panel {
+        .panneau-choix {
             width: min(980px, 92vw);
             min-height: 620px;
             padding: 52px;
             border-radius: 20px;
-            background: var(--panel);
-            box-shadow: var(--shadow);
+            background: var(--panneau);
+            box-shadow: var(--ombre);
         }
 
-        .choice-panel h1 {
+        .panneau-choix h1 {
             margin: 0 0 72px;
             font-size: clamp(54px, 7vw, 92px);
             line-height: 0.95;
         }
 
-        .choice-panel p {
+        .panneau-choix p {
             max-width: 760px;
             margin: 0 0 72px;
             font-size: clamp(34px, 4vw, 52px);
@@ -87,17 +87,17 @@
             line-height: 1.22;
         }
 
-        .choice-grid {
+        .grille-choix {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 52px;
         }
 
-        .choice-card,
-        .option-card,
-        .product-card {
+        .carte-choix,
+        .carte-option,
+        .carte-produit {
             background: #fff;
-            border: 4px solid var(--yellow);
+            border: 4px solid var(--jaune);
             border-radius: 14px;
             transition:
                 background-color 0.16s ease,
@@ -106,7 +106,7 @@
                 transform 0.16s ease;
         }
 
-        .choice-card {
+        .carte-choix {
             min-height: 330px;
             padding: 28px;
             display: grid;
@@ -116,25 +116,25 @@
             font-weight: 800;
         }
 
-        .choice-card img {
+        .carte-choix img {
             width: 180px;
             height: 180px;
             object-fit: contain;
         }
 
-        .choice-card:hover,
-        .choice-card:focus-visible {
+        .carte-choix:hover,
+        .carte-choix:focus-visible {
             background: #fffaf0;
             box-shadow: 0 14px 26px rgba(255, 198, 41, 0.28);
             transform: translateY(-3px);
             outline: none;
         }
 
-        .order-screen {
+        .ecran-commande {
             background: #fff;
         }
 
-        .menu-layout {
+        .disposition-menu {
             width: 100%;
             min-height: 100vh;
             display: grid;
@@ -146,14 +146,14 @@
             padding: 28px 36px 34px;
         }
 
-        .topbar {
+        .barre-haut {
             display: flex;
             align-items: center;
             gap: 18px;
             margin-bottom: 42px;
         }
 
-        .brand-link {
+        .lien-marque {
             width: 78px;
             height: 78px;
             border-radius: 10px;
@@ -162,20 +162,20 @@
             transition: background-color 0.16s ease, transform 0.16s ease;
         }
 
-        .brand-link:hover,
-        .brand-link:focus-visible {
+        .lien-marque:hover,
+        .lien-marque:focus-visible {
             background: #fff4d0;
             transform: translateY(-1px);
             outline: none;
         }
 
-        .brand {
+        .marque {
             width: 70px;
             height: 70px;
             object-fit: contain;
         }
 
-        .tabs {
+        .onglets {
             display: flex;
             align-items: stretch;
             gap: 10px;
@@ -185,7 +185,7 @@
             padding-bottom: 6px;
         }
 
-        .tab {
+        .onglet {
             min-width: max-content;
             padding: 14px 17px;
             border-bottom: 5px solid transparent;
@@ -196,24 +196,24 @@
             transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
         }
 
-        .tab.is-active {
-            border-color: var(--yellow);
+        .onglet.est-actif {
+            border-color: var(--jaune);
         }
 
-        .tab:hover,
-        .tab:focus-visible {
+        .onglet:hover,
+        .onglet:focus-visible {
             background: #fff4d0;
             color: #000;
             outline: none;
         }
 
-        .section-title {
+        .titre-section {
             margin: 0;
             font-size: clamp(34px, 4vw, 58px);
             line-height: 1;
         }
 
-        .section-subtitle {
+        .sous-titre-section {
             max-width: 760px;
             margin: 18px 0 42px;
             color: #282828;
@@ -221,13 +221,13 @@
             font-weight: 600;
         }
 
-        .products {
+        .produits {
             display: grid;
             grid-template-columns: repeat(4, minmax(130px, 1fr));
             gap: 34px 28px;
         }
 
-        .product-card {
+        .carte-produit {
             position: relative;
             min-height: 255px;
             padding: 18px 14px 16px;
@@ -238,22 +238,22 @@
             text-align: center;
         }
 
-        .product-card:hover,
-        .product-card:focus-visible {
-            border-color: var(--yellow);
+        .carte-produit:hover,
+        .carte-produit:focus-visible {
+            border-color: var(--jaune);
             box-shadow: 0 14px 24px rgba(0, 0, 0, 0.08);
             transform: translateY(-2px);
             outline: none;
         }
 
-        .product-card img {
+        .carte-produit img {
             width: 100%;
             height: 136px;
             object-fit: contain;
             align-self: center;
         }
 
-        .product-card strong {
+        .carte-produit strong {
             min-height: 44px;
             display: grid;
             place-items: center;
@@ -261,56 +261,56 @@
             line-height: 1.1;
         }
 
-        .price {
+        .prix {
             font-size: 20px;
             font-weight: 800;
         }
 
-        .cart {
+        .panier {
             min-height: 100vh;
             padding: 28px 22px;
             background: #fafafa;
-            border-left: 1px solid var(--line);
+            border-left: 1px solid var(--ligne);
             display: grid;
             grid-template-rows: auto 1fr auto;
             gap: 22px;
         }
 
-        .cart-head {
+        .entete-panier {
             display: flex;
             align-items: start;
             justify-content: space-between;
             gap: 20px;
         }
 
-        .cart h2 {
+        .panier h2 {
             margin: 0 0 12px;
             font-size: 22px;
         }
 
-        .order-number {
+        .numero-commande {
             font-size: 40px;
             font-weight: 900;
         }
 
-        .ticket-mode {
+        .mode-ticket {
             color: #444;
             font-weight: 700;
         }
 
-        .cart-list {
+        .liste-panier {
             margin: 0;
             padding: 0;
             list-style: none;
             overflow-y: auto;
         }
 
-        .cart-item {
+        .element-panier {
             padding: 14px 0;
-            border-bottom: 1px solid var(--line);
+            border-bottom: 1px solid var(--ligne);
         }
 
-        .cart-line {
+        .ligne-panier {
             display: flex;
             align-items: start;
             justify-content: space-between;
@@ -318,23 +318,23 @@
             font-weight: 800;
         }
 
-        .cart-options {
+        .options-panier {
             margin: 8px 0 0;
             padding-left: 16px;
             color: #555;
             line-height: 1.55;
         }
 
-        .empty-cart {
-            color: var(--muted);
+        .panier-vide {
+            color: var(--texte-discret);
             font-weight: 700;
         }
 
-        .empty-state {
+        .etat-vide {
             grid-column: 1 / -1;
             margin: 0;
             padding: 40px 0;
-            color: var(--muted);
+            color: var(--texte-discret);
             font-size: 24px;
             font-weight: 800;
         }
@@ -348,63 +348,63 @@
             font-weight: 900;
         }
 
-        .total-label {
+        .libelle-total {
             font-size: 18px;
             line-height: 1.1;
         }
 
-        .total-price {
+        .prix-total {
             font-size: 34px;
         }
 
-        .cart-actions {
+        .actions-panier {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 14px;
         }
 
-        .btn {
+        .bouton {
             min-height: 58px;
             padding: 12px 22px;
             border-radius: 8px;
             font-weight: 900;
-            background: var(--yellow);
+            background: var(--jaune);
             color: #111;
             transition: background-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
         }
 
-        .btn:hover,
-        .btn:focus-visible {
-            background: var(--yellow-dark);
+        .bouton:hover,
+        .bouton:focus-visible {
+            background: var(--jaune-fonce);
             box-shadow: 0 10px 18px rgba(242, 180, 7, 0.28);
             transform: translateY(-1px);
             outline: none;
         }
 
-        .btn.secondary {
+        .bouton.secondaire {
             background: #fff;
-            border: 2px solid var(--line);
+            border: 2px solid var(--ligne);
         }
 
-        .btn.secondary:hover,
-        .btn.secondary:focus-visible {
+        .bouton.secondaire:hover,
+        .bouton.secondaire:focus-visible {
             background: #f5f5f5;
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
         }
 
-        .btn.danger {
+        .bouton.danger {
             background: #fff;
             border: 2px solid var(--danger);
             color: var(--danger);
         }
 
-        .btn.danger:hover,
-        .btn.danger:focus-visible {
+        .bouton.danger:hover,
+        .bouton.danger:focus-visible {
             background: #fff1f2;
             box-shadow: 0 8px 16px rgba(194, 31, 40, 0.14);
         }
 
-        .modal {
+        .modale {
             position: fixed;
             inset: 0;
             display: none;
@@ -414,39 +414,39 @@
             background: rgba(0, 0, 0, 0.42);
         }
 
-        .modal.is-open {
+        .modale.est-ouverte {
             display: grid;
         }
 
-        .modal-panel {
+        .panneau-modale {
             width: min(980px, 94vw);
             max-height: 92vh;
             overflow: auto;
             padding: 44px;
             border-radius: 16px;
             background: #fff;
-            box-shadow: var(--shadow);
+            box-shadow: var(--ombre);
         }
 
-        .modal-panel h2 {
+        .panneau-modale h2 {
             margin: 0 0 12px;
             font-size: clamp(34px, 4vw, 52px);
         }
 
-        .modal-panel p {
+        .panneau-modale p {
             margin: 0 0 32px;
             font-size: 24px;
             font-weight: 700;
         }
 
-        .option-grid {
+        .grille-options {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 28px;
             margin-bottom: 34px;
         }
 
-        .option-card {
+        .carte-option {
             min-height: 190px;
             padding: 22px;
             display: grid;
@@ -456,31 +456,31 @@
             font-weight: 900;
         }
 
-        .option-card.is-selected {
-            border-color: var(--success);
+        .carte-option.est-selectionne {
+            border-color: var(--succes);
         }
 
-        .option-card:hover,
-        .option-card:focus-visible {
+        .carte-option:hover,
+        .carte-option:focus-visible {
             background: #fffaf0;
             box-shadow: 0 12px 22px rgba(0, 0, 0, 0.08);
             transform: translateY(-2px);
             outline: none;
         }
 
-        .option-card img {
+        .carte-option img {
             width: 150px;
             height: 110px;
             object-fit: contain;
         }
 
-        .modal-actions {
+        .actions-modale {
             display: flex;
             justify-content: flex-end;
             gap: 16px;
         }
 
-        .stepper {
+        .selecteur-quantite {
             display: flex;
             justify-content: center;
             align-items: center;
@@ -488,40 +488,40 @@
             margin: 22px 0 34px;
         }
 
-        .stepper button {
+        .selecteur-quantite button {
             width: 64px;
             height: 64px;
             border-radius: 50%;
-            background: var(--yellow);
+            background: var(--jaune);
             font-size: 34px;
             font-weight: 900;
         }
 
-        .stepper span {
+        .selecteur-quantite span {
             min-width: 70px;
             text-align: center;
             font-size: 36px;
             font-weight: 900;
         }
 
-        .table-number {
+        .numero-table {
             display: flex;
             justify-content: center;
             gap: 22px;
             margin: 38px 0;
         }
 
-        .table-number input {
+        .numero-table input {
             width: 90px;
             height: 90px;
-            border: 2px solid var(--line);
+            border: 2px solid var(--ligne);
             border-radius: 8px;
             text-align: center;
             font-size: 48px;
             font-weight: 900;
         }
 
-        .thanks {
+        .remerciement {
             align-items: center;
             justify-content: center;
             padding: 40px;
@@ -530,21 +530,21 @@
                 url("/wacdo/images/mc_landing_banner.png") center top / cover no-repeat;
         }
 
-        .thanks-panel {
+        .panneau-remerciement {
             width: min(900px, 92vw);
             padding: 58px;
             border-radius: 18px;
             background: #fff;
-            box-shadow: var(--shadow);
+            box-shadow: var(--ombre);
             text-align: center;
         }
 
-        .thanks-panel h1 {
+        .panneau-remerciement h1 {
             margin: 0 0 32px;
             font-size: clamp(44px, 6vw, 72px);
         }
 
-        .thanks-panel p {
+        .panneau-remerciement p {
             margin: 0 0 18px;
             font-size: clamp(28px, 4vw, 42px);
             font-weight: 800;
@@ -552,23 +552,23 @@
         }
 
         @media (max-width: 1100px) {
-            .menu-layout {
+            .disposition-menu {
                 grid-template-columns: 1fr;
             }
 
-            .cart {
+            .panier {
                 min-height: auto;
                 border-left: 0;
-                border-top: 1px solid var(--line);
+                border-top: 1px solid var(--ligne);
             }
 
-            .products {
+            .produits {
                 grid-template-columns: repeat(3, minmax(130px, 1fr));
             }
         }
 
         @media (max-width: 760px) {
-            .welcome {
+            .accueil {
                 padding: 24px;
                 background:
                     linear-gradient(rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.92)),
@@ -576,23 +576,23 @@
                     #f2f2f2;
             }
 
-            .choice-panel {
+            .panneau-choix {
                 min-height: auto;
                 padding: 28px;
             }
 
-            .choice-panel h1,
-            .choice-panel p {
+            .panneau-choix h1,
+            .panneau-choix p {
                 margin-bottom: 30px;
             }
 
-            .choice-grid,
-            .option-grid {
+            .grille-choix,
+            .grille-options {
                 grid-template-columns: 1fr;
                 gap: 18px;
             }
 
-            .choice-card {
+            .carte-choix {
                 min-height: 230px;
             }
 
@@ -600,25 +600,25 @@
                 padding: 18px;
             }
 
-            .topbar {
+            .barre-haut {
                 align-items: flex-start;
                 flex-direction: column;
             }
 
-            .tabs {
+            .onglets {
                 width: 100%;
             }
 
-            .products {
+            .produits {
                 grid-template-columns: repeat(2, minmax(120px, 1fr));
                 gap: 16px;
             }
 
-            .product-card {
+            .carte-produit {
                 min-height: 230px;
             }
 
-            .modal-panel {
+            .panneau-modale {
                 padding: 26px;
             }
         }

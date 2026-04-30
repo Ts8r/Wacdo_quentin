@@ -1,7 +1,7 @@
 # Docker Compose — Wacdo Project (quentin)
 # Services : MariaDB + PHP (Apache + PDO MySQL)
 # Network  : wacdo_bak_quentin (bridge interne) + admin_proxy (Traefik externe)
-# Domain   : quentin-wacdo.stark.a3n.fr (wildcard DNS)
+# Domains  : quentin-wacdo.stark.a3n.fr + front-quentin-wacdo.stark.a3n.fr
 
 services:
 
@@ -39,6 +39,7 @@ services:
       DB_USER:     ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       DB_CHARSET:  ${DB_CHARSET}
+      FRONT_URL:   ${FRONT_URL}
     volumes:
       - .:/var/www/html
     depends_on:
@@ -58,6 +59,40 @@ services:
       - "traefik.http.routers.wacdo-quentin-back-secure.entrypoints=websecure"
       - "traefik.http.routers.wacdo-quentin-back-secure.tls.certresolver=letsencrypt"
       - "traefik.http.routers.wacdo-quentin-back-secure.service=wacdo-quentin-back"
+
+  wacdo_front:
+    image: httpd:2.4-alpine
+    container_name: wacdo-quentin-front
+    restart: unless-stopped
+    volumes:
+      - ./index.html:/usr/local/apache2/htdocs/index.html:ro
+      - ./assets/css/borne.css:/usr/local/apache2/htdocs/assets/css/borne.css:ro
+      - ./assets/js/borne.js:/usr/local/apache2/htdocs/assets/js/borne.js:ro
+      - ./wacdo/categories.json:/usr/local/apache2/htdocs/wacdo/categories.json:ro
+      - ./wacdo/produits.json:/usr/local/apache2/htdocs/wacdo/produits.json:ro
+      - ./wacdo/images:/usr/local/apache2/htdocs/wacdo/images:ro
+      - ./wacdo/categories:/usr/local/apache2/htdocs/wacdo/categories:ro
+      - ./wacdo/burgers:/usr/local/apache2/htdocs/wacdo/burgers:ro
+      - ./wacdo/boissons:/usr/local/apache2/htdocs/wacdo/boissons:ro
+      - ./wacdo/desserts:/usr/local/apache2/htdocs/wacdo/desserts:ro
+      - ./wacdo/encas:/usr/local/apache2/htdocs/wacdo/encas:ro
+      - ./wacdo/frites:/usr/local/apache2/htdocs/wacdo/frites:ro
+      - ./wacdo/salades:/usr/local/apache2/htdocs/wacdo/salades:ro
+      - ./wacdo/sauces:/usr/local/apache2/htdocs/wacdo/sauces:ro
+      - ./wacdo/wraps:/usr/local/apache2/htdocs/wacdo/wraps:ro
+    networks:
+      - admin_proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=admin_proxy"
+      - "traefik.http.routers.wacdo-quentin-front.rule=Host(`${FRONT_URL}`)"
+      - "traefik.http.routers.wacdo-quentin-front.entrypoints=web"
+      - "traefik.http.routers.wacdo-quentin-front.middlewares=redirect-https"
+      - "traefik.http.services.wacdo-quentin-front.loadbalancer.server.port=80"
+      - "traefik.http.routers.wacdo-quentin-front-secure.rule=Host(`${FRONT_URL}`)"
+      - "traefik.http.routers.wacdo-quentin-front-secure.entrypoints=websecure"
+      - "traefik.http.routers.wacdo-quentin-front-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.wacdo-quentin-front-secure.service=wacdo-quentin-front"
 
 networks:
   wacdo_bak_quentin:

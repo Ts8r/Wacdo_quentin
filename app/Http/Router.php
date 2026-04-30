@@ -32,8 +32,7 @@ final class Router
 
     public function dispatch(): void
     {
-        if ($this->method === 'OPTIONS') {
-            JsonResponse::send(['ok' => true]);
+        if (Cors::handlePreflight($this->method, $this->uri)) {
             return;
         }
 

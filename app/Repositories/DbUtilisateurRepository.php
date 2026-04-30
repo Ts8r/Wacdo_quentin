@@ -106,9 +106,57 @@ final class DbUtilisateurRepository
         return $this->formatUserForApi($user);
     }
 
+    public function findAllForApi(?string $search, ?string $role, int $limit, int $offset): array
+    {
+        [$whereSql, $params] = $this->userFilters($search, $role);
+
+        $stmt = $this->pdo->prepare(
+            'SELECT
+                u.id_user AS id,
+                u.id_role,
+                u.nom,
+                u.prenom,
+                u.email,
+                u.num_tel,
+                u.created_at,
+                r.code_role,
+                r.libelle AS role
+             FROM utilisateurs u
+             INNER JOIN roles r ON r.id_role = u.id_role
+             ' . $whereSql . '
+             ORDER BY u.id_user DESC
+             LIMIT :limit OFFSET :offset'
+        );
+
+        foreach ($params as $key => $value) {
+            $stmt->bindValue(':' . $key, $value);
+        }
+
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return array_map([$this, 'formatUserForApi'], $stmt->fetchAll());
+    }
+
+    public function countForApi(?string $search, ?string $role): int
+    {
+        [$whereSql, $params] = $this->userFilters($search, $role);
+
+        $stmt = $this->pdo->prepare(
+            'SELECT COUNT(*)
+             FROM utilisateurs u
+             INNER JOIN roles r ON r.id_role = u.id_role
+             ' . $whereSql
+        );
+        $stmt->execute($params);
+
+        return (int) $stmt->fetchColumn();
+    }
+
     public function formatUserForApi(array $user): array
     {
-        return [
+        $formatted = [
             'id' => (int) $user['id'],
             'nom' => (string) $user['nom'],
             'prenom' => (string) $user['prenom'],
@@ -119,6 +167,36 @@ final class DbUtilisateurRepository
                 'code' => (string) $user['code_role'],
                 'libelle' => (string) $user['role'],
             ],
+        ];
+
+        if (array_key_exists('created_at', $user)) {
+            $formatted['created_at'] = (string) $user['created_at'];
+        }
+
+        return $formatted;
+    }
+
+    private function userFilters(?string $search, ?string $role): array
+    {
+        $where = [];
+        $params = [];
+
+        if ($search !== null && $search !== '') {
+            $where[] = '(u.nom LIKE :search_nom OR u.prenom LIKE :search_prenom OR u.email LIKE :search_email OR u.num_tel LIKE :search_num_tel)';
+            $params['search_nom'] = '%' . $search . '%';
+            $params['search_prenom'] = '%' . $search . '%';
+            $params['search_email'] = '%' . $search . '%';
+            $params['search_num_tel'] = '%' . $search . '%';
+        }
+
+        if ($role !== null && $role !== '') {
+            $where[] = 'r.code_role = :role';
+            $params['role'] = strtoupper($role);
+        }
+
+        return [
+            $where === [] ? '' : 'WHERE ' . implode(' AND ', $where),
+            $params,
         ];
     }
 }

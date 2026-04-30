@@ -73,7 +73,8 @@ CREATE TABLE menus (
   id_menu INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   nom VARCHAR(120) NOT NULL,
   prix DECIMAL(10,2) NOT NULL,
-  image VARCHAR(255) NULL,
+  image MEDIUMBLOB NULL,
+  image_mime VARCHAR(80) NULL,
   disponibilite TINYINT(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB;
 
@@ -82,7 +83,8 @@ CREATE TABLE produits (
   nom VARCHAR(120) NOT NULL,
   description TEXT NULL,
   prix_unitaire DECIMAL(10,2) NOT NULL,
-  image VARCHAR(255) NULL,
+  image MEDIUMBLOB NULL,
+  image_mime VARCHAR(80) NULL,
   disponibilite TINYINT(1) NOT NULL DEFAULT 1,
   quantite INT NOT NULL DEFAULT 0
 ) ENGINE=InnoDB;
@@ -90,7 +92,8 @@ CREATE TABLE produits (
 CREATE TABLE categories (
   id_cat INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   type VARCHAR(80) NOT NULL,
-  image VARCHAR(255) NULL,
+  image MEDIUMBLOB NULL,
+  image_mime VARCHAR(80) NULL,
   description VARCHAR(255) NULL
 ) ENGINE=InnoDB;
 

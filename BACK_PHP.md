@@ -83,6 +83,33 @@ ingredients.quantite
 ingredients_produits.quantite
 ```
 
+### Images
+
+Les images ne sont plus stockees sous forme de chemins dans la base.
+
+Colonnes concernees :
+
+```txt
+categories.image = MEDIUMBLOB
+categories.image_mime = VARCHAR(80)
+
+produits.image = MEDIUMBLOB
+produits.image_mime = VARCHAR(80)
+
+menus.image = MEDIUMBLOB
+menus.image_mime = VARCHAR(80)
+```
+
+Le seed lit les fichiers image depuis `/home/acadenice/quentin_wacdo/Wacdo_quentin/wacdo`.
+
+L API renvoie les images au front sous forme de data URI :
+
+```txt
+data:image/png;base64,...
+```
+
+Verification faite en base : aucune ligne `image` ne contient encore un chemin de type `/burgers/...`.
+
 ### Commandes
 
 La creation de commande :
@@ -133,6 +160,9 @@ ADMIN
 
 Routes back office protegees :
 
+- `PATCH /api/produits/{id}`
+- `PATCH /api/menus/{id}`
+- `GET /api/utilisateurs`
 - `GET /api/commandes`
 - `GET /api/commandes/{id}`
 - `PATCH /api/commandes/{id}/statut`
@@ -170,7 +200,9 @@ GET /api/health
 GET /api/categories
 GET /api/produits
 GET /api/produits/{id}
+PATCH /api/produits/{id}
 GET /api/menus
+PATCH /api/menus/{id}
 GET /api/catalogue
 ```
 
@@ -178,6 +210,7 @@ GET /api/catalogue
 
 ```txt
 POST /api/utilisateurs
+GET  /api/utilisateurs
 ```
 
 ### Auth
@@ -265,6 +298,42 @@ curl -X PATCH "https://quentin-wacdo.stark.a3n.fr/api/ingredients/1" \
   }'
 ```
 
+### Modification produit back office
+
+```bash
+curl -X PATCH "https://quentin-wacdo.stark.a3n.fr/api/produits/17" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prix": 6.00,
+    "disponibilite": true,
+    "quantite": 100,
+    "description": "Burgers"
+  }'
+```
+
+### Modification menu back office
+
+```bash
+curl -X PATCH "https://quentin-wacdo.stark.a3n.fr/api/menus/1" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prix": 8.80,
+    "disponibilite": true
+  }'
+```
+
+### Liste utilisateurs back office
+
+```bash
+curl -X GET "https://quentin-wacdo.stark.a3n.fr/api/utilisateurs?role=CLIENT&search=auth&limit=5&offset=0"
+```
+
+### Interface back office
+
+```txt
+GET /back-office
+```
+
 ## Tests deja verifies
 
 ### Auth
@@ -293,6 +362,40 @@ curl -X PATCH "https://quentin-wacdo.stark.a3n.fr/api/ingredients/1" \
 - mise a jour stock -> OK
 - quantite negative -> `422`
 
+### Produits et menus back office
+
+- `PATCH /api/produits/{id}` non connecte -> `401`
+- `PATCH /api/produits/{id}` admin -> `200`
+- `PATCH /api/menus/{id}` admin -> `200`
+- quantite produit negative -> `422`
+- prix menu negatif -> `422`
+
+### Utilisateurs back office
+
+- `GET /api/utilisateurs` non connecte -> `401`
+- `GET /api/utilisateurs` client -> `403`
+- `GET /api/utilisateurs` admin -> `200`
+- filtres `role` + `search` -> OK
+- pagination `limit` + `offset` -> OK
+- `limit` invalide -> `422`
+
+### Front back office vanilla
+
+- `GET /back-office` -> `200`
+- CSS back office servi -> `200`
+- JS back office servi -> `200`
+- ecran disponible avec login, commandes, catalogue, ingredients, utilisateurs
+
+### Images en base
+
+- colonnes `image` converties en `MEDIUMBLOB` -> OK
+- colonnes `image_mime` ajoutees -> OK
+- seed images depuis le dossier `wacdo` -> OK
+- `GET /api/produits/{id}` renvoie `data:image/png;base64,...` -> OK
+- `GET /api/categories` renvoie `data:image/png;base64,...` -> OK
+- `GET /api/menus` renvoie `data:image/png;base64,...` -> OK
+- aucune image en base ne commence par `/` -> OK
+
 ### Base ingredients
 
 Verification faite :
@@ -306,28 +409,17 @@ ingredients_produits.quantite = int(10) unsigned
 
 Prochaine suite logique pour le back office :
 
-1. `PATCH /api/produits/{id}`
-   - prix
-   - disponibilite
-   - quantite
-   - image
-   - description
+1. Consolider le front back office
+   - verifier visuellement desktop/mobile
+   - ajouter detail commande si besoin
+   - ameliorer les filtres canal/statut selon les donnees reelles
 
-2. `PATCH /api/menus/{id}`
-   - prix
-   - disponibilite
-   - image
-
-3. `GET /api/utilisateurs`
-   - pour voir les comptes en back office
-
-4. Eventuellement plus tard :
+2. Eventuellement ensuite :
    - modification mot de passe
    - gestion roles admin / employe / manager
    - journalisation ou historique des changements
 
-5. Ensuite seulement :
-   - front back office vanilla
+3. Ensuite :
    - front client vanilla
 
 ## Note de reprise
@@ -339,5 +431,11 @@ Le chantier backend PHP est deja bien avance. Le socle a conserver absolument :
 - routes back office protegees
 - commandes avec logique ingredients
 - annulation qui remet le stock
+- images stockees en binaire en base, pas sous forme de chemins
 
-La prochaine vraie brique admin cohérente a construire est la gestion des produits et menus, afin qu un admin puisse piloter le catalogue sans toucher directement la base.
+La brique admin de modification produits / menus est en place.
+La brique admin de liste utilisateurs est en place.
+Un premier front back office vanilla existe sur `/back-office`.
+La migration images binaires en base est en place.
+
+La prochaine vraie brique coherente est la consolidation visuelle et fonctionnelle du back office.

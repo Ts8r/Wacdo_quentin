@@ -1,422 +1,514 @@
-const CATEGORY_DETAILS = {
+const DETAILS_CATEGORIES = {
     menus: {
-        label: "Menus",
-        title: "Nos menus",
+        libelle: "Menus",
+        titre: "Nos menus",
         description: "Un sandwich, une friture ou une salade et une boisson"
     },
     burgers: {
-        label: "Sandwiches",
-        title: "Nos Sandwiches",
+        libelle: "Sandwiches",
+        titre: "Nos Sandwiches",
         description: "Les classiques Wacdo préparés à la commande"
     },
     wraps: {
-        label: "Wraps",
-        title: "Nos Wraps",
+        libelle: "Wraps",
+        titre: "Nos Wraps",
         description: "Du poulet, du fromage et des recettes faciles à emporter"
     },
     frites: {
-        label: "Frites",
-        title: "Nos accompagnements",
+        libelle: "Frites",
+        titre: "Nos accompagnements",
         description: "Frites, potatoes, la pomme de terre dans tous ses états"
     },
     boissons: {
-        label: "Boissons Froides",
-        title: "Nos Boissons Fraîches",
+        libelle: "Boissons Froides",
+        titre: "Nos Boissons Fraîches",
         description: "Une petite soif, sucrée, légère, rafraîchissante"
     },
     encas: {
-        label: "Encas",
-        title: "Nos encas",
+        libelle: "Encas",
+        titre: "Nos encas",
         description: "Une petite faim à ajouter à votre commande"
     },
     desserts: {
-        label: "Desserts",
-        title: "Nos desserts",
+        libelle: "Desserts",
+        titre: "Nos desserts",
         description: "Terminez votre commande sur une touche sucrée"
     }
 };
 
-const CATEGORY_ORDER = ["menus", "burgers", "wraps", "frites", "boissons", "encas", "desserts"];
-const WACDO_ASSET_ROOT = "/wacdo";
+const ORDRE_CATEGORIES = ["menus", "burgers", "wraps", "frites", "boissons", "encas", "desserts"];
+const API_BASE = (window.API_BASE || document.querySelector('meta[name="api-base"]')?.content || "https://quentin-wacdo.stark.a3n.fr/api").replace(/\/$/, "");
+const SOURCE_DONNEES = "api";
+const URL_DONNEES = {
+    static: "/wacdo/produits.json",
+    api: `${API_BASE}/catalogue`
+};
 
-const MENU_OPTION_GROUPS = {
+const GROUPES_OPTIONS_MENU = {
     sizes: {
-        container: "menu-size-options",
-        stateKey: "menuSize",
+        conteneur: "options-taille-menu",
+        cleEtat: "tailleMenu",
         options: [
-            { label: "Menu Maxi Best Of", image: "/wacdo/images/illustration-maxi-best-of.png" },
-            { label: "Menu Best Of", image: "/wacdo/images/illustration-best-of.png" }
+            { libelle: "Menu Maxi Best Of", image: "/wacdo/images/illustration-maxi-best-of.png" },
+            { libelle: "Menu Best Of", image: "/wacdo/images/illustration-best-of.png" }
         ]
     },
     sides: {
-        container: "side-options",
-        stateKey: "side",
+        conteneur: "options-accompagnement",
+        cleEtat: "accompagnement",
         options: [
-            { label: "Frites", image: "/wacdo/frites/GRANDE_FRITE.png" },
-            { label: "Potatoes", image: "/wacdo/frites/POTATOES.png" }
+            { libelle: "Frites", image: "/wacdo/frites/GRANDE_FRITE.png" },
+            { libelle: "Potatoes", image: "/wacdo/frites/POTATOES.png" }
         ]
     },
     drinks: {
-        container: "drink-options",
-        stateKey: "menuDrink",
+        conteneur: "options-boisson",
+        cleEtat: "boissonMenu",
         options: [
-            { label: "Eau" },
-            { label: "Coca Cola" },
-            { label: "Coca Sans Sucres" },
-            { label: "Jus de Pommes Bio" },
-            { label: "Ice Tea Citron" }
+            { libelle: "Eau" },
+            { libelle: "Coca Cola" },
+            { libelle: "Coca Sans Sucres" },
+            { libelle: "Jus de Pommes Bio" },
+            { libelle: "Ice Tea Citron" }
         ]
     }
 };
 
-const DRINK_SIZES = ["30Cl", "50Cl"];
+const TAILLES_BOISSON = ["30Cl", "50Cl"];
 
-const state = {
-    activeCategory: "menus",
+const etat = {
+    categorieActive: "menus",
     mode: "Sur place",
-    products: {},
-    cart: [],
-    selectedProduct: null,
-    menuSize: "Menu Maxi Best Of",
-    side: "Frites",
-    menuDrink: "Coca Cola",
-    drinkSize: "30Cl",
-    drinkQuantity: 1
+    produits: {},
+    panier: [],
+    produitSelectionne: null,
+    tailleMenu: "Menu Maxi Best Of",
+    accompagnement: "Frites",
+    boissonMenu: "Coca Cola",
+    tailleBoisson: "30Cl",
+    quantiteBoisson: 1
 };
 
-const dom = {
-    screens: document.querySelectorAll(".screen"),
-    tabs: document.querySelector("#category-tabs"),
-    grid: document.querySelector("#product-grid"),
-    title: document.querySelector("#category-title"),
-    description: document.querySelector("#category-description"),
-    cartList: document.querySelector("#cart-list"),
-    total: document.querySelector("#cart-total"),
-    ticketMode: document.querySelector("#ticket-mode"),
-    drinkQuantity: document.querySelector("#drink-quantity")
+const elements = {
+    ecrans: document.querySelectorAll(".ecran"),
+    onglets: document.querySelector("#onglets-categories"),
+    grille: document.querySelector("#grille-produits"),
+    titre: document.querySelector("#titre-categorie"),
+    description: document.querySelector("#description-categorie"),
+    listePanier: document.querySelector("#liste-panier"),
+    total: document.querySelector("#panier-total"),
+    modeTicket: document.querySelector("#mode-ticket"),
+    quantiteBoisson: document.querySelector("#quantite-boisson")
 };
 
 init();
 
 async function init() {
-    state.products = await loadProducts();
-    renderTabs();
-    renderProducts();
-    renderCart();
-    bindEvents();
+    etat.produits = await chargerProduits();
+    afficherOnglets();
+    afficherProduits();
+    afficherPanier();
+    lierEvenements();
 }
 
-async function loadProducts() {
+async function chargerProduits() {
     try {
-        const response = await fetch("/wacdo/produits.json");
+        const reponse = await fetch(URL_DONNEES[SOURCE_DONNEES], {
+            credentials: "include",
+            headers: {
+                Accept: "application/json"
+            }
+        });
 
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+        if (!reponse.ok) {
+            throw new Error(`HTTP ${reponse.status}`);
         }
 
-        return normalizeProductCatalogue(await response.json());
+        const donnees = await reponse.json();
+
+        return SOURCE_DONNEES === "api"
+            ? normaliserCatalogueApi(donnees)
+            : normaliserCatalogueProduits(donnees);
     } catch (error) {
-        dom.grid.innerHTML = `<p class="empty-state">Impossible de charger le catalogue.</p>`;
+        elements.grille.innerHTML = `<p class="etat-vide">Impossible de charger le catalogue.</p>`;
         return {};
     }
 }
 
-function normalizeProductCatalogue(catalogue) {
+function normaliserCatalogueApi(catalogue) {
+    const donnees = catalogue.data ?? catalogue;
+    const produitsGroupes = {};
+
+    (donnees.produits ?? []).forEach((produit) => {
+        const categorie = produit.categorie ?? "encas";
+        produitsGroupes[categorie] ??= [];
+        produitsGroupes[categorie].push({
+            id: produit.id,
+            nom: produit.nom,
+            prix: produit.prix_unitaire,
+            image: produit.image,
+        });
+    });
+
+    produitsGroupes.menus = (donnees.menus ?? []).map((menu) => ({
+        id: menu.id,
+        nom: menu.nom,
+        prix: menu.prix,
+        image: menu.image,
+    }));
+
+    return normaliserCatalogueProduits(produitsGroupes);
+}
+
+function normaliserCatalogueProduits(catalogue) {
     return Object.fromEntries(
-        Object.entries(catalogue).map(([categoryId, entries]) => [
+        Object.entries(catalogue).map(([categoryId, entrees]) => [
             categoryId,
-            entries.map((product) => ({
-                id: product.id,
-                name: product.nom,
-                price: Number(product.prix),
-                image: normalizeImagePath(product.image),
-                isDrink: categoryId === "boissons"
+            entrees.map((produit) => ({
+                id: produit.id,
+                nom: produit.nom,
+                prix: Number(produit.prix),
+                image: normaliserCheminImage(produit.image),
+                estBoisson: categoryId === "boissons"
             }))
         ])
     );
 }
 
-function normalizeImagePath(path) {
-    return `${WACDO_ASSET_ROOT}${path}`
+function normaliserCheminImage(chemin) {
+    if (typeof chemin === "string" && chemin.startsWith("data:")) {
+        return chemin;
+    }
+
+    const cheminNormalise = String(chemin || "").replace(/^\/?wacdo\//, "/");
+
+    return `/wacdo${cheminNormalise}`
         .replace(".png.png", ".png")
         .replace(".jpg.png", ".png");
 }
 
-function bindEvents() {
-    document.querySelectorAll("[data-mode]").forEach((button) => {
-        button.addEventListener("click", () => {
-            state.mode = button.dataset.mode;
-            renderCart();
-            showScreen("#order-screen");
+function echapperHtml(valeur) {
+    return String(valeur ?? "").replace(/[&<>"']/g, (caractere) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#039;"
+    }[caractere]));
+}
+
+function lierEvenements() {
+    document.querySelectorAll("[data-mode]").forEach((bouton) => {
+        bouton.addEventListener("click", () => {
+            etat.mode = bouton.dataset.mode;
+            afficherPanier();
+            afficherEcran("#ecran-commande");
         });
     });
 
-    dom.tabs.addEventListener("click", handleCategoryClick);
-    dom.grid.addEventListener("click", handleProductClick);
-    document.querySelector("#menu-modal").addEventListener("click", handleMenuOptionClick);
-    document.querySelector("#drink-modal").addEventListener("click", handleDrinkOptionClick);
-    document.querySelector("#add-menu").addEventListener("click", addConfiguredMenu);
-    document.querySelector("#add-drink").addEventListener("click", addConfiguredDrink);
-    document.querySelector("#increase-drink").addEventListener("click", () => updateDrinkQuantity(1));
-    document.querySelector("#decrease-drink").addEventListener("click", () => updateDrinkQuantity(-1));
-    document.querySelector("#reset-order").addEventListener("click", resetOrder);
-    document.querySelector("#pay-order").addEventListener("click", startPayment);
-    document.querySelector("#save-table").addEventListener("click", finishOrder);
-    document.querySelector("#new-order").addEventListener("click", resetOrder);
+    elements.onglets.addEventListener("click", gererClicCategorie);
+    elements.grille.addEventListener("click", gererClicProduit);
+    document.querySelector("#modale-menu").addEventListener("click", gererClicOptionMenu);
+    document.querySelector("#modale-boisson").addEventListener("click", gererClicOptionBoisson);
+    document.querySelector("#ajouter-menu").addEventListener("click", ajouterMenuConfigure);
+    document.querySelector("#ajouter-boisson").addEventListener("click", ajouterBoissonConfigure);
+    document.querySelector("#augmenter-boisson").addEventListener("click", () => modifierQuantiteBoisson(1));
+    document.querySelector("#diminuer-boisson").addEventListener("click", () => modifierQuantiteBoisson(-1));
+    document.querySelector("#abandon-commande").addEventListener("click", reinitialiserCommande);
+    document.querySelector("#payer-commande").addEventListener("click", commencerPaiement);
+    document.querySelector("#enregistrer-table").addEventListener("click", terminerCommande);
+    document.querySelector("#nouvelle-commande").addEventListener("click", reinitialiserCommande);
 
-    document.querySelectorAll("[data-close-modal]").forEach((button) => {
-        button.addEventListener("click", closeModals);
+    document.querySelectorAll("[data-fermer-modale]").forEach((bouton) => {
+        bouton.addEventListener("click", fermerModales);
     });
 }
 
-function handleCategoryClick(event) {
-    const button = event.target.closest("[data-category]");
+function gererClicCategorie(evenement) {
+    const bouton = evenement.target.closest("[data-categorie]");
 
-    if (!button) {
+    if (!bouton) {
         return;
     }
 
-    state.activeCategory = button.dataset.category;
-    renderTabs();
-    renderProducts();
+    etat.categorieActive = bouton.dataset.categorie;
+    afficherOnglets();
+    afficherProduits();
 }
 
-function handleProductClick(event) {
-    const button = event.target.closest("[data-product]");
+function gererClicProduit(evenement) {
+    const bouton = evenement.target.closest("[data-produit]");
 
-    if (!button) {
+    if (!bouton) {
         return;
     }
 
-    const product = state.products[state.activeCategory][Number(button.dataset.product)];
+    const produit = etat.produits[etat.categorieActive][Number(bouton.dataset.produit)];
 
-    if (state.activeCategory === "menus") {
-        prepareMenuModal(product);
+    if (etat.categorieActive === "menus") {
+        preparerModaleMenu(produit);
         return;
     }
 
-    if (product.isDrink) {
-        prepareDrinkModal(product);
+    if (produit.estBoisson) {
+        preparerModaleBoisson(produit);
         return;
     }
 
-    addToCart(createCartEntry(product));
+    ajouterAuPanier(creerLignePanier(produit));
 }
 
-function handleMenuOptionClick(event) {
-    const option = event.target.closest(".option-card");
+function gererClicOptionMenu(evenement) {
+    const option = evenement.target.closest(".carte-option");
 
     if (!option) {
         return;
     }
 
-    const group = Object.values(MENU_OPTION_GROUPS).find((entry) => entry.container === option.parentElement.id);
+    const groupe = Object.values(GROUPES_OPTIONS_MENU).find((ligne) => ligne.conteneur === option.parentElement.id);
 
-    if (!group) {
+    if (!groupe) {
         return;
     }
 
-    state[group.stateKey] = option.dataset.value;
-    selectOption(group.container, option.dataset.value);
+    etat[groupe.cleEtat] = option.dataset.valeur;
+    selectionnerOption(groupe.conteneur, option.dataset.valeur);
 }
 
-function handleDrinkOptionClick(event) {
-    const option = event.target.closest(".option-card");
+function gererClicOptionBoisson(evenement) {
+    const option = evenement.target.closest(".carte-option");
 
     if (!option) {
         return;
     }
 
-    state.drinkSize = option.dataset.value;
-    selectOption("drink-size-options", state.drinkSize);
+    etat.tailleBoisson = option.dataset.valeur;
+    selectionnerOption("options-taille-boisson", etat.tailleBoisson);
 }
 
-function renderTabs() {
-    dom.tabs.innerHTML = getVisibleCategories().map((category) => `
-        <button class="tab ${category.id === state.activeCategory ? "is-active" : ""}" type="button" data-category="${category.id}">
-            ${category.label}
+function afficherOnglets() {
+    elements.onglets.innerHTML = categoriesVisibles().map((categorie) => `
+        <button class="onglet ${categorie.id === etat.categorieActive ? "est-actif" : ""}" type="button" data-categorie="${categorie.id}">
+            ${categorie.libelle}
         </button>
     `).join("");
 }
 
-function renderProducts() {
-    const category = CATEGORY_DETAILS[state.activeCategory];
-    const products = state.products[state.activeCategory] ?? [];
+function afficherProduits() {
+    const categorie = DETAILS_CATEGORIES[etat.categorieActive];
+    const produits = etat.produits[etat.categorieActive] ?? [];
 
-    dom.title.textContent = category.title;
-    dom.description.textContent = category.description;
-    dom.grid.innerHTML = products.map((product, index) => `
-        <button class="product-card" type="button" data-product="${index}">
-            <img src="${product.image}" alt="">
-            <strong>${product.name}</strong>
-            <span class="price">${formatPrice(product.price)}</span>
+    elements.titre.textContent = categorie.titre;
+    elements.description.textContent = categorie.description;
+    elements.grille.innerHTML = produits.map((produit, index) => `
+        <button class="carte-produit" type="button" data-produit="${index}">
+            <img src="${echapperHtml(produit.image)}" alt="">
+            <strong>${echapperHtml(produit.nom)}</strong>
+            <span class="prix">${formaterPrix(produit.prix)}</span>
         </button>
     `).join("");
 }
 
-function renderCart() {
-    dom.ticketMode.textContent = `${state.mode} : 326`;
+function afficherPanier() {
+    elements.modeTicket.textContent = `${etat.mode} : 326`;
 
-    if (state.cart.length === 0) {
-        dom.cartList.innerHTML = `<li class="empty-cart">Votre commande est vide</li>`;
-        dom.total.textContent = formatPrice(0);
+    if (etat.panier.length === 0) {
+        elements.listePanier.innerHTML = `<li class="panier-vide">Votre commande est vide</li>`;
+        elements.total.textContent = formaterPrix(0);
         return;
     }
 
-    dom.cartList.innerHTML = state.cart.map((entry) => `
-        <li class="cart-item">
-            <div class="cart-line">
-                <span>${entry.quantity > 1 ? entry.quantity + " x " : ""}${entry.name}</span>
-                <span>${formatPrice(entry.price * entry.quantity)}</span>
+    elements.listePanier.innerHTML = etat.panier.map((ligne) => `
+        <li class="element-panier">
+            <div class="ligne-panier">
+                <span>${ligne.quantite > 1 ? ligne.quantite + " x " : ""}${echapperHtml(ligne.nom)}</span>
+                <span>${formaterPrix(ligne.prix * ligne.quantite)}</span>
             </div>
-            ${renderCartOptions(entry.options)}
+            ${afficherOptionsPanier(ligne.options)}
         </li>
     `).join("");
 
-    dom.total.textContent = formatPrice(getCartTotal());
+    elements.total.textContent = formaterPrix(totalPanier());
 }
 
-function renderCartOptions(options) {
+function afficherOptionsPanier(options) {
     if (options.length === 0) {
         return "";
     }
 
-    return `<ul class="cart-options">${options.map((option) => `<li>${option}</li>`).join("")}</ul>`;
+    return `<ul class="options-panier">${options.map((option) => `<li>${echapperHtml(option)}</li>`).join("")}</ul>`;
 }
 
-function getVisibleCategories() {
-    return CATEGORY_ORDER
-        .filter((id) => CATEGORY_DETAILS[id] && state.products[id])
-        .map((id) => ({ id, ...CATEGORY_DETAILS[id] }));
+function categoriesVisibles() {
+    return ORDRE_CATEGORIES
+        .filter((id) => DETAILS_CATEGORIES[id] && etat.produits[id])
+        .map((id) => ({ id, ...DETAILS_CATEGORIES[id] }));
 }
 
-function getCartTotal() {
-    return state.cart.reduce((sum, entry) => sum + entry.price * entry.quantity, 0);
+function totalPanier() {
+    return etat.panier.reduce((somme, ligne) => somme + ligne.prix * ligne.quantite, 0);
 }
 
-function addToCart(entry) {
-    state.cart.push(entry);
-    renderCart();
+function ajouterAuPanier(ligne) {
+    etat.panier.push(ligne);
+    afficherPanier();
 }
 
-function createCartEntry(product, overrides = {}) {
+function creerLignePanier(produit, surcharges = {}) {
     return {
-        name: product.name,
-        price: product.price,
-        quantity: 1,
+        id: produit.id,
+        type: "produits",
+        nom: produit.nom,
+        prix: produit.prix,
+        quantite: 1,
         options: [],
-        ...overrides
+        ...surcharges
     };
 }
 
-function prepareMenuModal(product) {
-    state.selectedProduct = product;
-    state.menuSize = "Menu Maxi Best Of";
-    state.side = "Frites";
-    state.menuDrink = "Coca Cola";
+function preparerModaleMenu(produit) {
+    etat.produitSelectionne = produit;
+    etat.tailleMenu = "Menu Maxi Best Of";
+    etat.accompagnement = "Frites";
+    etat.boissonMenu = "Coca Cola";
 
-    Object.values(MENU_OPTION_GROUPS).forEach((group) => {
-        renderOptionCards(group.container, group.options, state[group.stateKey]);
+    Object.values(GROUPES_OPTIONS_MENU).forEach((groupe) => {
+        afficherCartesOptions(groupe.conteneur, groupe.options, etat[groupe.cleEtat]);
     });
 
-    openModal("#menu-modal");
+    ouvrirModale("#modale-menu");
 }
 
-function prepareDrinkModal(product) {
-    state.selectedProduct = product;
-    state.drinkSize = "30Cl";
-    state.drinkQuantity = 1;
-    dom.drinkQuantity.textContent = state.drinkQuantity;
-    renderOptionCards(
-        "drink-size-options",
-        DRINK_SIZES.map((label) => ({ label, image: product.image })),
-        state.drinkSize
+function preparerModaleBoisson(produit) {
+    etat.produitSelectionne = produit;
+    etat.tailleBoisson = "30Cl";
+    etat.quantiteBoisson = 1;
+    elements.quantiteBoisson.textContent = etat.quantiteBoisson;
+    afficherCartesOptions(
+        "options-taille-boisson",
+        TAILLES_BOISSON.map((libelle) => ({ libelle, image: produit.image })),
+        etat.tailleBoisson
     );
-    openModal("#drink-modal");
+    ouvrirModale("#modale-boisson");
 }
 
-function renderOptionCards(containerId, options, selected) {
-    const container = document.querySelector(`#${containerId}`);
+function afficherCartesOptions(idConteneur, options, selection) {
+    const conteneur = document.querySelector(`#${idConteneur}`);
 
-    container.innerHTML = options.map((option) => `
-        <button class="option-card ${option.label === selected ? "is-selected" : ""}" type="button" data-value="${option.label}">
-            ${option.image ? `<img src="${option.image}" alt="">` : ""}
-            <span>${option.label}</span>
+    conteneur.innerHTML = options.map((option) => `
+        <button class="carte-option ${option.libelle === selection ? "est-selectionne" : ""}" type="button" data-valeur="${option.libelle}">
+            ${option.image ? `<img src="${echapperHtml(option.image)}" alt="">` : ""}
+            <span>${echapperHtml(option.libelle)}</span>
         </button>
     `).join("");
 }
 
-function addConfiguredMenu() {
-    const product = state.selectedProduct;
-    const extra = state.menuSize === "Menu Maxi Best Of" ? 1.50 : 0;
+function ajouterMenuConfigure() {
+    const produit = etat.produitSelectionne;
+    const supplement = etat.tailleMenu === "Menu Maxi Best Of" ? 1.50 : 0;
 
-    addToCart(createCartEntry(product, {
-        name: `${state.menuSize} ${product.name.replace(/^Menu\s/, "")}`,
-        price: product.price + extra,
-        options: [state.side.toLowerCase(), state.menuDrink.toLowerCase(), "ketchup", "sauce deluxe"]
+    ajouterAuPanier(creerLignePanier(produit, {
+        type: "menus",
+        nom: `${etat.tailleMenu} ${produit.nom.replace(/^Menu\s/, "")}`,
+        prix: produit.prix + supplement,
+        taille: etat.tailleMenu === "Menu Maxi Best Of" ? "L" : "M",
+        options: [etat.accompagnement.toLowerCase(), etat.boissonMenu.toLowerCase(), "ketchup", "sauce deluxe"]
     }));
-    closeModals();
+    fermerModales();
 }
 
-function addConfiguredDrink() {
-    const product = state.selectedProduct;
-    const extra = state.drinkSize === "50Cl" ? 0.50 : 0;
+function ajouterBoissonConfigure() {
+    const produit = etat.produitSelectionne;
+    const supplement = etat.tailleBoisson === "50Cl" ? 0.50 : 0;
 
-    addToCart(createCartEntry(product, {
-        price: product.price + extra,
-        quantity: state.drinkQuantity,
-        options: [state.drinkSize]
+    ajouterAuPanier(creerLignePanier(produit, {
+        prix: produit.prix + supplement,
+        quantite: etat.quantiteBoisson,
+        options: [etat.tailleBoisson]
     }));
-    closeModals();
+    fermerModales();
 }
 
-function updateDrinkQuantity(step) {
-    state.drinkQuantity = Math.max(1, state.drinkQuantity + step);
-    dom.drinkQuantity.textContent = state.drinkQuantity;
+function modifierQuantiteBoisson(step) {
+    etat.quantiteBoisson = Math.max(1, etat.quantiteBoisson + step);
+    elements.quantiteBoisson.textContent = etat.quantiteBoisson;
 }
 
-function resetOrder() {
-    state.cart = [];
-    state.activeCategory = "menus";
-    renderTabs();
-    renderProducts();
-    renderCart();
-    showScreen("#welcome-screen");
+function reinitialiserCommande() {
+    etat.panier = [];
+    etat.categorieActive = "menus";
+    afficherOnglets();
+    afficherProduits();
+    afficherPanier();
+    afficherEcran("#ecran-accueil");
 }
 
-function startPayment() {
-    if (state.mode === "Sur place") {
-        openModal("#table-modal");
+async function commencerPaiement() {
+    if (etat.panier.length === 0) {
         return;
     }
 
-    showScreen("#thanks-screen");
+    if (etat.mode === "Sur place") {
+        ouvrirModale("#modale-table");
+        return;
+    }
+
+    await envoyerCommande();
+    afficherEcran("#remerciement-ecran");
 }
 
-function finishOrder() {
-    closeModals();
-    showScreen("#thanks-screen");
+async function terminerCommande() {
+    fermerModales();
+    await envoyerCommande();
+    afficherEcran("#remerciement-ecran");
 }
 
-function selectOption(containerId, value) {
-    document.querySelectorAll(`#${containerId} .option-card`).forEach((card) => {
-        card.classList.toggle("is-selected", card.dataset.value === value);
+async function envoyerCommande() {
+    const payload = {
+        canal: "borne",
+        produits: etat.panier
+            .filter((ligne) => ligne.type === "produits")
+            .map((ligne) => ({ id: ligne.id, quantite: ligne.quantite })),
+        menus: etat.panier
+            .filter((ligne) => ligne.type === "menus")
+            .map((ligne) => ({ id: ligne.id, quantite: ligne.quantite, taille: ligne.taille || "M" }))
+    };
+
+    const reponse = await fetch(`${API_BASE}/commandes`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+    });
+
+    if (!reponse.ok) {
+        const erreur = await reponse.json().catch(() => ({}));
+        throw new Error(erreur.message || `HTTP ${reponse.status}`);
+    }
+}
+
+function selectionnerOption(idConteneur, valeur) {
+    document.querySelectorAll(`#${idConteneur} .carte-option`).forEach((card) => {
+        card.classList.toggle("est-selectionne", card.dataset.valeur === valeur);
     });
 }
 
-function showScreen(id) {
-    dom.screens.forEach((screen) => screen.classList.remove("is-active"));
-    document.querySelector(id).classList.add("is-active");
+function afficherEcran(id) {
+    elements.ecrans.forEach((ecran) => ecran.classList.remove("est-actif"));
+    document.querySelector(id).classList.add("est-actif");
 }
 
-function openModal(id) {
-    document.querySelector(id).classList.add("is-open");
+function ouvrirModale(id) {
+    document.querySelector(id).classList.add("est-ouverte");
 }
 
-function closeModals() {
-    document.querySelectorAll(".modal").forEach((modal) => modal.classList.remove("is-open"));
+function fermerModales() {
+    document.querySelectorAll(".modale").forEach((modale) => modale.classList.remove("est-ouverte"));
 }
 
-function formatPrice(value) {
-    return value.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "€";
+function formaterPrix(valeur) {
+    return valeur.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "€";
 }

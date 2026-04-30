@@ -4,21 +4,14 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use PDO;
-
 final class HomeController extends Controller
 {
-    public function __construct(private PDO $pdo)
+    public function __construct()
     {
     }
 
-    public function index(): void
+    public function backOffice(): void
     {
-        $dbName = (string) $this->pdo->query('SELECT DATABASE()')->fetchColumn();
-
-        $this->render('home', [
-            'title' => 'WACDO Back',
-            'message' => sprintf('Structure MVC explicite active. Connexion PDO OK sur la base %s.', $dbName),
-        ]);
+        $this->render('back_office');
     }
 }

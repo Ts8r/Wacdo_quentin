@@ -67,6 +67,7 @@ final class SessionAuthGuard
     private function startSession(): void
     {
         if (session_status() !== PHP_SESSION_ACTIVE) {
+            SessionCookieConfig::apply();
             session_start();
         }
     }

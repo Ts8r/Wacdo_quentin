@@ -8,6 +8,7 @@ use App\Exceptions\ValidationException;
 use App\Http\JsonRequest;
 use App\Http\JsonResponse;
 use App\Repositories\DbUtilisateurRepository;
+use App\Security\SessionCookieConfig;
 use Throwable;
 
 final class AuthController
@@ -137,6 +138,7 @@ final class AuthController
     private function startSession(): void
     {
         if (session_status() !== PHP_SESSION_ACTIVE) {
+            SessionCookieConfig::apply();
             session_start();
         }
     }
