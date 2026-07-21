@@ -40,11 +40,11 @@ declare(strict_types=1);
                     <h2>Connexion</h2>
                     <label>
                         Email
-                        <input type="email" name="email" value="quentin.admin@wacdo.local" autocomplete="username" required>
+                        <input type="email" name="email" autocomplete="username" required>
                     </label>
                     <label>
                         Mot de passe
-                        <input type="password" name="mot_de_passe" value="Admin1234!" autocomplete="current-password" required>
+                        <input type="password" name="mot_de_passe" autocomplete="current-password" required>
                     </label>
                     <button class="primary-button" type="submit">Se connecter</button>
                     <p class="form-message" id="login-message"></p>
@@ -79,6 +79,7 @@ declare(strict_types=1);
                                     <th>Canal</th>
                                     <th>Total</th>
                                     <th>Statut</th>
+                                    <th>Detail</th>
                                     <th>Action</th>
                                 </tr>
                             </thead>

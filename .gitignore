@@ -3,3 +3,4 @@ docker/php/tmp/
 mariadb_data/
 *.log
 .DS_Store
+_incoming/

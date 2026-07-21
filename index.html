@@ -5,22 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WACDO - Borne</title>
     <meta name="api-base" content="https://quentin-wacdo.stark.a3n.fr/api">
-    <link rel="stylesheet" href="/assets/css/borne.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/borne.css?v=20260715-2">
 </head>
 <body>
     <main class="application">
         <section class="ecran accueil est-actif" id="ecran-accueil" aria-label="Accueil borne">
             <div class="panneau-choix">
                 <h1>Bonjour,</h1>
-                <p>Souhaitez-vous consommer votre menu sur place ou préférez-vous l'emporter ?</p>
+                <p>Souhaitez-vous consommer votre menu sur place<br>ou préférez-vous l'emporter ?</p>
                 <div class="grille-choix">
-                    <button class="carte-choix" type="button" data-mode="Sur place">
+                    <button class="carte-choix" type="button" data-mode="sur_place">
                         <img src="/wacdo/images/illustration-sur-place.png" alt="">
                         <span>Sur Place</span>
                     </button>
-                    <button class="carte-choix" type="button" data-mode="A emporter">
+                    <button class="carte-choix" type="button" data-mode="a_emporter">
                         <img src="/wacdo/images/illustration-a-emporter.png" alt="">
-                        <span>A Emporter</span>
+                        <span>À Emporter</span>
                     </button>
                 </div>
             </div>
@@ -30,10 +33,13 @@
             <div class="disposition-menu">
                 <section class="catalogue">
                     <header class="barre-haut">
-                        <a class="lien-marque" href="/" aria-label="Retour à l'accueil Wacdo">
-                            <img class="marque" src="/wacdo/images/logo.png" alt="Wacdo">
-                        </a>
+                        <button class="fleche-slider fleche-gauche" type="button" id="categories-gauche" aria-label="Catégories précédentes">
+                            <img src="/wacdo/images/fleche-slider.png" alt="">
+                        </button>
                         <nav class="onglets" id="onglets-categories" aria-label="Catégories"></nav>
+                        <button class="fleche-slider fleche-droite" type="button" id="categories-droite" aria-label="Catégories suivantes">
+                            <img src="/wacdo/images/fleche-slider.png" alt="">
+                        </button>
                     </header>
                     <h1 class="titre-section" id="titre-categorie">Nos menus</h1>
                     <p class="sous-titre-section" id="description-categorie">Un sandwich, une friture ou une salade et une boisson</p>
@@ -44,7 +50,7 @@
                     <div class="entete-panier">
                         <div>
                             <h2>Commande numéro</h2>
-                            <div class="mode-ticket" id="mode-ticket">Sur place : 326</div>
+                            <div class="mode-ticket" id="mode-ticket">Sur place</div>
                         </div>
                         <div class="numero-commande" id="numero-commande">--</div>
                     </div>
@@ -74,56 +80,42 @@
                 <button class="bouton" type="button" id="nouvelle-commande">Nouvelle commande</button>
             </div>
         </section>
+
+        <div class="modale" id="modale-menu" role="dialog" aria-modal="true" aria-labelledby="titre-menu">
+            <div class="panneau-modale fenetre-menu">
+                <button class="bouton-fermer" type="button" data-fermer-modale aria-label="Fermer">×</button>
+                <button class="bouton secondaire bouton-retour" type="button" id="menu-retour" hidden>Retour</button>
+                <section class="etape-menu" data-etape="1">
+                    <h2 id="titre-menu">Choisissez votre menu</h2>
+                    <p>La taille choisie est enregistrée et recalculée par le serveur.</p>
+                    <div class="grille-options" id="options-taille-menu"></div>
+                </section>
+                <div class="actions-modale">
+                    <button class="bouton secondaire" type="button" data-fermer-modale>Annuler</button>
+                    <button class="bouton" type="button" id="menu-suivant">Ajouter à ma commande</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modale" id="modale-boisson" role="dialog" aria-modal="true" aria-labelledby="titre-boisson">
+            <div class="panneau-modale">
+                <button class="bouton-fermer" type="button" data-fermer-modale aria-label="Fermer">×</button>
+                <h2 id="titre-boisson">Une petite soif ?</h2>
+                <p>Choisissez la quantité. Le prix final est recalculé par le serveur.</p>
+                <div class="grille-options" id="options-taille-boisson" hidden></div>
+                <div class="selecteur-quantite" aria-label="Quantité">
+                    <button type="button" id="diminuer-boisson">-</button>
+                    <span id="quantite-boisson">1</span>
+                    <button type="button" id="augmenter-boisson">+</button>
+                </div>
+                <div class="actions-modale">
+                    <button class="bouton secondaire" type="button" data-fermer-modale>Annuler</button>
+                    <button class="bouton" type="button" id="ajouter-boisson">Ajouter à ma commande</button>
+                </div>
+            </div>
+        </div>
     </main>
 
-    <div class="modale" id="modale-menu" role="dialog" aria-modal="true" aria-labelledby="titre-menu">
-        <div class="panneau-modale">
-            <h2 id="titre-menu">Une grosse faim ?</h2>
-            <p>Choisissez la taille de votre menu, avec 1 euro d'écart entre S, M et L</p>
-            <div class="grille-options" id="options-taille-menu"></div>
-            <p>Choisissez votre accompagnement</p>
-            <div class="grille-options" id="options-accompagnement"></div>
-            <p>Choisissez votre boisson</p>
-            <div class="grille-options" id="options-boisson"></div>
-            <div class="actions-modale">
-                <button class="bouton secondaire" type="button" data-fermer-modale>Retour</button>
-                <button class="bouton" type="button" id="ajouter-menu">Ajouter le menu à ma commande</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modale" id="modale-boisson" role="dialog" aria-modal="true" aria-labelledby="titre-boisson">
-        <div class="panneau-modale">
-            <h2 id="titre-boisson">Une petite soif ?</h2>
-            <p>Choisissez la taille de votre boisson, +0.50€ pour le format 50 Cl</p>
-            <div class="grille-options" id="options-taille-boisson"></div>
-            <div class="selecteur-quantite" aria-label="Quantité">
-                <button type="button" id="diminuer-boisson">-</button>
-                <span id="quantite-boisson">1</span>
-                <button type="button" id="augmenter-boisson">+</button>
-            </div>
-            <div class="actions-modale">
-                <button class="bouton secondaire" type="button" data-fermer-modale>Annuler</button>
-                <button class="bouton" type="button" id="ajouter-boisson">Ajouter a ma commande</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modale" id="modale-table" role="dialog" aria-modal="true" aria-labelledby="titre-table">
-        <div class="panneau-modale">
-            <h2 id="titre-table">Pour être servis à table,</h2>
-            <p>Récupérez un chevalet et indiquez ici le numéro inscrit dessus</p>
-            <div class="numero-table">
-                <input inputmode="numeric" maxlength="1" value="2" aria-label="Premier chiffre">
-                <input inputmode="numeric" maxlength="1" value="6" aria-label="Deuxième chiffre">
-                <input inputmode="numeric" maxlength="1" value="1" aria-label="Troisième chiffre">
-            </div>
-            <div class="actions-modale">
-                <button class="bouton" type="button" id="enregistrer-table">Enregistrer le numéro</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="/assets/js/borne.js"></script>
+    <script src="/assets/js/borne.js?v=20260715-2"></script>
 </body>
 </html>

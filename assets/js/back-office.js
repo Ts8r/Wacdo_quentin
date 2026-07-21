@@ -14,6 +14,20 @@ const titles = {
     utilisateurs: 'Utilisateurs',
 };
 
+const API_PATHS = {
+    authMe: '/api/auth/me',
+    authLogin: '/api/auth/login',
+    authLogout: '/api/auth/logout',
+    catalogue: '/api/catalogue',
+    commandes: '/api/commandes',
+    commandeStatut: (id) => `/api/commandes/${id}/statut`,
+    produit: (id) => `/api/produits/${id}`,
+    menu: (id) => `/api/menus/${id}`,
+    ingredients: '/api/ingredients',
+    ingredient: (id) => `/api/ingredients/${id}`,
+    utilisateurs: '/api/utilisateurs',
+};
+
 const nextStatuses = {
     en_attente: ['en_preparation', 'annulee'],
     en_preparation: ['prete', 'annulee'],
@@ -77,7 +91,7 @@ function setSession(user) {
 
 async function checkSession() {
     try {
-        const payload = await api('/api/auth/me');
+        const payload = await api(API_PATHS.authMe);
         setSession(payload.data.user);
     } catch (error) {
         setSession(null);
@@ -91,7 +105,7 @@ async function login(event) {
     message.textContent = '';
 
     try {
-        const payload = await api('/api/auth/login', {
+        const payload = await api(API_PATHS.authLogin, {
             method: 'POST',
             body: JSON.stringify({
                 email: form.email.value,
@@ -106,7 +120,7 @@ async function login(event) {
 }
 
 async function logout() {
-    await api('/api/auth/logout', { method: 'POST' });
+    await api(API_PATHS.authLogout, { method: 'POST' });
     setSession(null);
 }
 
@@ -136,7 +150,7 @@ async function loadOrders() {
     if (status) params.set('statut', status);
     if (channel) params.set('canal', channel);
 
-    const payload = await api(`/api/commandes?${params}`);
+    const payload = await api(`${API_PATHS.commandes}?${params}`);
     const body = $('#orders-body');
     body.innerHTML = '';
 
@@ -150,8 +164,22 @@ async function loadOrders() {
             <td>${escapeHtml(order.canal.libelle)}</td>
             <td>${formatMoney(order.total_ttc)}</td>
             <td><span class="status-pill ${statusClass(status)}">${escapeHtml(status)}</span></td>
+            <td><button class="small-button" type="button" data-order-detail="${order.id}">Detail</button></td>
             <td></td>
         `;
+        const detailRow = document.createElement('tr');
+        detailRow.className = 'order-detail-row is-hidden';
+        detailRow.innerHTML = `
+            <td colspan="7">
+                <div class="order-detail">
+                    ${renderOrderDetail(order)}
+                </div>
+            </td>
+        `;
+        row.querySelector('[data-order-detail]').addEventListener('click', () => {
+            detailRow.classList.toggle('is-hidden');
+        });
+
         const actionCell = row.lastElementChild;
 
         if (options.length === 0) {
@@ -162,7 +190,7 @@ async function loadOrders() {
             select.innerHTML = '<option value="">Changer</option>' + options.map((option) => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`).join('');
             select.addEventListener('change', async () => {
                 if (!select.value) return;
-                await api(`/api/commandes/${order.id}/statut`, {
+                await api(API_PATHS.commandeStatut(order.id), {
                     method: 'PATCH',
                     body: JSON.stringify({ statut: select.value }),
                 });
@@ -173,11 +201,46 @@ async function loadOrders() {
         }
 
         body.appendChild(row);
+        body.appendChild(detailRow);
     });
 }
 
+function renderOrderDetail(order) {
+    const productLines = order.produits || [];
+    const menuLines = order.menus || [];
+
+    if (productLines.length === 0 && menuLines.length === 0) {
+        return '<p class="empty-detail">Aucune ligne de commande.</p>';
+    }
+
+    return `
+        ${renderOrderLines('Produits', productLines)}
+        ${renderOrderLines('Menus', menuLines)}
+    `;
+}
+
+function renderOrderLines(title, lines) {
+    if (lines.length === 0) {
+        return '';
+    }
+
+    return `
+        <section>
+            <h3>${escapeHtml(title)}</h3>
+            <ul>
+                ${lines.map((line) => `
+                    <li>
+                        <span>${escapeHtml(line.quantite)} x ${escapeHtml(line.nom)}${line.taille ? ` (${escapeHtml(line.taille)})` : ''}</span>
+                        <strong>${formatMoney(line.prix_ligne)}</strong>
+                    </li>
+                `).join('')}
+            </ul>
+        </section>
+    `;
+}
+
 async function loadCatalogue() {
-    const payload = await api('/api/catalogue');
+    const payload = await api(API_PATHS.catalogue);
     state.catalogue = payload.data;
     renderCatalogue();
 }
@@ -210,7 +273,7 @@ function renderProductCards(products) {
         const [priceInput, quantityInput] = card.querySelectorAll('input[type="number"]');
         const availableInput = card.querySelector('input[type="checkbox"]');
         card.querySelector('button').addEventListener('click', async () => {
-            await api(`/api/produits/${product.id}`, {
+            await api(API_PATHS.produit(product.id), {
                 method: 'PATCH',
                 body: JSON.stringify({
                     prix: Number(priceInput.value),
@@ -257,7 +320,7 @@ function renderMenuCards(menus) {
         });
         card.querySelector('button').addEventListener('click', async () => {
             const pricesBySize = Object.fromEntries(priceInputs.map((input) => [input.dataset.sizePrice, Number(input.value)]));
-            await api(`/api/menus/${menu.id}`, {
+            await api(API_PATHS.menu(menu.id), {
                 method: 'PATCH',
                 body: JSON.stringify({
                     prix_s: pricesBySize.S,
@@ -300,7 +363,7 @@ async function loadIngredients() {
     const search = $('#ingredients-search').value.trim();
     if (search) params.set('search', search);
 
-    const payload = await api(`/api/ingredients?${params}`);
+    const payload = await api(`${API_PATHS.ingredients}?${params}`);
     const body = $('#ingredients-body');
     body.innerHTML = '';
 
@@ -314,7 +377,7 @@ async function loadIngredients() {
         `;
         const input = row.querySelector('input');
         row.querySelector('button').addEventListener('click', async () => {
-            await api(`/api/ingredients/${ingredient.id}`, {
+            await api(API_PATHS.ingredient(ingredient.id), {
                 method: 'PATCH',
                 body: JSON.stringify({ quantite: Number(input.value) }),
             });
@@ -332,7 +395,7 @@ async function loadUsers() {
     if (search) params.set('search', search);
     if (role) params.set('role', role);
 
-    const payload = await api(`/api/utilisateurs?${params}`);
+    const payload = await api(`${API_PATHS.utilisateurs}?${params}`);
     const body = $('#users-body');
     body.innerHTML = '';
 

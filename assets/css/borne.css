@@ -1,665 +1,727 @@
-        :root {
-            --jaune: #ffc629;
-            --jaune-fonce: #f2b407;
-            --encre: #171717;
-            --texte-discret: #6f6f6f;
-            --ligne: #dedede;
-            --panneau: #ffffff;
-            --page: #f7f7f7;
-            --danger: #c21f28;
-            --succes: #178f4f;
-            --ombre: 0 18px 35px rgba(0, 0, 0, 0.16);
-            font-family: "Source Sans Pro", Arial, Helvetica, sans-serif;
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 0;
-            min-height: 100vh;
-            color: var(--encre);
-            background: var(--page);
-        }
-
-        button {
-            border: 0;
-            font: inherit;
-            cursor: pointer;
-        }
-
-        button,
-        a {
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        img {
-            display: block;
-            max-width: 100%;
-        }
-
-        .application {
-            min-height: 100vh;
-            overflow: hidden;
-        }
-
-        .ecran {
-            display: none;
-            min-height: 100vh;
-        }
-
-        .ecran.est-actif {
-            display: flex;
-        }
-
-        .accueil {
-            align-items: center;
-            justify-content: center;
-            padding: 7vh 4vw;
-            background:
-                linear-gradient(105deg, rgba(255, 198, 41, 0.88) 0 38%, rgba(255, 255, 255, 0) 38%),
-                linear-gradient(rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.76)),
-                url("/wacdo/images/mc_landing_banner.png") right top / auto 58vh no-repeat,
-                #f2f2f2;
-        }
-
-        .panneau-choix {
-            width: min(980px, 92vw);
-            min-height: 620px;
-            padding: 52px;
-            border-radius: 20px;
-            background: var(--panneau);
-            box-shadow: var(--ombre);
-        }
-
-        .panneau-choix h1 {
-            margin: 0 0 72px;
-            font-size: clamp(54px, 7vw, 92px);
-            line-height: 0.95;
-        }
-
-        .panneau-choix p {
-            max-width: 760px;
-            margin: 0 0 72px;
-            font-size: clamp(34px, 4vw, 52px);
-            font-weight: 800;
-            line-height: 1.22;
-        }
-
-        .grille-choix {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 52px;
-        }
-
-        .carte-choix,
-        .carte-option,
-        .carte-produit {
-            background: #fff;
-            border: 4px solid var(--jaune);
-            border-radius: 14px;
-            transition:
-                background-color 0.16s ease,
-                border-color 0.16s ease,
-                box-shadow 0.16s ease,
-                transform 0.16s ease;
-        }
-
-        .carte-choix {
-            min-height: 330px;
-            padding: 28px;
-            display: grid;
-            place-items: center;
-            gap: 18px;
-            font-size: clamp(34px, 4vw, 48px);
-            font-weight: 800;
-        }
-
-        .carte-choix img {
-            width: 180px;
-            height: 180px;
-            object-fit: contain;
-        }
-
-        .carte-choix:hover,
-        .carte-choix:focus-visible {
-            background: #fffaf0;
-            box-shadow: 0 14px 26px rgba(255, 198, 41, 0.28);
-            transform: translateY(-3px);
-            outline: none;
-        }
-
-        .ecran-commande {
-            background: #fff;
-        }
-
-        .disposition-menu {
-            width: 100%;
-            min-height: 100vh;
-            display: grid;
-            grid-template-columns: 1fr 365px;
-        }
-
-        .catalogue {
-            min-width: 0;
-            padding: 28px 36px 34px;
-        }
-
-        .barre-haut {
-            display: flex;
-            align-items: center;
-            gap: 18px;
-            margin-bottom: 42px;
-        }
-
-        .lien-marque {
-            width: 78px;
-            height: 78px;
-            border-radius: 10px;
-            display: grid;
-            place-items: center;
-            transition: background-color 0.16s ease, transform 0.16s ease;
-        }
-
-        .lien-marque:hover,
-        .lien-marque:focus-visible {
-            background: #fff4d0;
-            transform: translateY(-1px);
-            outline: none;
-        }
-
-        .marque {
-            width: 70px;
-            height: 70px;
-            object-fit: contain;
-        }
-
-        .onglets {
-            display: flex;
-            align-items: stretch;
-            gap: 10px;
-            min-width: 0;
-            flex: 1;
-            overflow-x: auto;
-            padding-bottom: 6px;
-        }
-
-        .onglet {
-            min-width: max-content;
-            padding: 14px 17px;
-            border-bottom: 5px solid transparent;
-            border-radius: 8px 8px 0 0;
-            background: transparent;
-            font-weight: 700;
-            color: #333;
-            transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
-        }
-
-        .onglet.est-actif {
-            border-color: var(--jaune);
-        }
-
-        .onglet:hover,
-        .onglet:focus-visible {
-            background: #fff4d0;
-            color: #000;
-            outline: none;
-        }
-
-        .titre-section {
-            margin: 0;
-            font-size: clamp(34px, 4vw, 58px);
-            line-height: 1;
-        }
-
-        .sous-titre-section {
-            max-width: 760px;
-            margin: 18px 0 42px;
-            color: #282828;
-            font-size: clamp(20px, 2vw, 28px);
-            font-weight: 600;
-        }
-
-        .produits {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(130px, 1fr));
-            gap: 34px 28px;
-        }
-
-        .carte-produit {
-            position: relative;
-            min-height: 255px;
-            padding: 18px 14px 16px;
-            border-color: transparent;
-            display: grid;
-            grid-template-rows: 136px auto auto;
-            gap: 8px;
-            text-align: center;
-        }
-
-        .carte-produit:hover,
-        .carte-produit:focus-visible {
-            border-color: var(--jaune);
-            box-shadow: 0 14px 24px rgba(0, 0, 0, 0.08);
-            transform: translateY(-2px);
-            outline: none;
-        }
-
-        .carte-produit img {
-            width: 100%;
-            height: 136px;
-            object-fit: contain;
-            align-self: center;
-        }
-
-        .carte-produit strong {
-            min-height: 44px;
-            display: grid;
-            place-items: center;
-            font-size: 20px;
-            line-height: 1.1;
-        }
-
-        .prix {
-            font-size: 20px;
-            font-weight: 800;
-        }
-
-        .panier {
-            min-height: 100vh;
-            padding: 28px 22px;
-            background: #fafafa;
-            border-left: 1px solid var(--ligne);
-            display: grid;
-            grid-template-rows: auto 1fr auto;
-            gap: 22px;
-        }
-
-        .entete-panier {
-            display: flex;
-            align-items: start;
-            justify-content: space-between;
-            gap: 20px;
-        }
-
-        .panier h2 {
-            margin: 0 0 12px;
-            font-size: 22px;
-        }
-
-        .numero-commande {
-            font-size: 40px;
-            font-weight: 900;
-        }
-
-        .mode-ticket {
-            color: #444;
-            font-weight: 700;
-        }
-
-        .liste-panier {
-            margin: 0;
-            padding: 0;
-            list-style: none;
-            overflow-y: auto;
-        }
-
-        .element-panier {
-            padding: 14px 0;
-            border-bottom: 1px solid var(--ligne);
-        }
-
-        .ligne-panier {
-            display: flex;
-            align-items: start;
-            justify-content: space-between;
-            gap: 12px;
-            font-weight: 800;
-        }
-
-        .options-panier {
-            margin: 8px 0 0;
-            padding-left: 16px;
-            color: #555;
-            line-height: 1.55;
-        }
-
-        .panier-vide {
-            color: var(--texte-discret);
-            font-weight: 700;
-        }
-
-        .etat-vide {
-            grid-column: 1 / -1;
-            margin: 0;
-            padding: 40px 0;
-            color: var(--texte-discret);
-            font-size: 24px;
-            font-weight: 800;
-        }
-
-        .total {
-            display: grid;
-            grid-template-columns: 1fr auto;
-            align-items: end;
-            gap: 20px;
-            margin-bottom: 18px;
-            font-weight: 900;
-        }
-
-        .libelle-total {
-            font-size: 18px;
-            line-height: 1.1;
-        }
-
-        .prix-total {
-            font-size: 34px;
-        }
-
-        .actions-panier {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 14px;
-        }
-
-        .bouton {
-            min-height: 58px;
-            padding: 12px 22px;
-            border-radius: 8px;
-            font-weight: 900;
-            background: var(--jaune);
-            color: #111;
-            transition: background-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
-        }
-
-        .bouton:hover,
-        .bouton:focus-visible {
-            background: var(--jaune-fonce);
-            box-shadow: 0 10px 18px rgba(242, 180, 7, 0.28);
-            transform: translateY(-1px);
-            outline: none;
-        }
-
-        .bouton:disabled {
-            cursor: wait;
-            opacity: 0.64;
-            transform: none;
-        }
-
-        .bouton.secondaire {
-            background: #fff;
-            border: 2px solid var(--ligne);
-        }
-
-        .bouton.secondaire:hover,
-        .bouton.secondaire:focus-visible {
-            background: #f5f5f5;
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
-        }
-
-        .bouton.danger {
-            background: #fff;
-            border: 2px solid var(--danger);
-            color: var(--danger);
-        }
-
-        .bouton.danger:hover,
-        .bouton.danger:focus-visible {
-            background: #fff1f2;
-            box-shadow: 0 8px 16px rgba(194, 31, 40, 0.14);
-        }
-
-        .message-commande {
-            display: none;
-            margin: 16px 0 0;
-            padding: 12px 14px;
-            border-radius: 8px;
-            font-weight: 800;
-            line-height: 1.25;
-        }
-
-        .message-commande.est-visible {
-            display: block;
-        }
-
-        .message-commande.est-erreur {
-            background: #fff1f2;
-            color: var(--danger);
-        }
-
-        .message-commande.est-info {
-            background: #fff7dc;
-            color: #5f4400;
-        }
-
-        .modale {
-            position: fixed;
-            inset: 0;
-            display: none;
-            place-items: center;
-            z-index: 10;
-            padding: 36px;
-            background: rgba(0, 0, 0, 0.42);
-        }
-
-        .modale.est-ouverte {
-            display: grid;
-        }
-
-        .panneau-modale {
-            width: min(980px, 94vw);
-            max-height: 92vh;
-            overflow: auto;
-            padding: 44px;
-            border-radius: 16px;
-            background: #fff;
-            box-shadow: var(--ombre);
-        }
-
-        .panneau-modale h2 {
-            margin: 0 0 12px;
-            font-size: clamp(34px, 4vw, 52px);
-        }
-
-        .panneau-modale p {
-            margin: 0 0 32px;
-            font-size: 24px;
-            font-weight: 700;
-        }
-
-        .grille-options {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 28px;
-            margin-bottom: 34px;
-        }
-
-        .carte-option {
-            min-height: 190px;
-            padding: 22px;
-            display: grid;
-            place-items: center;
-            gap: 14px;
-            font-size: 28px;
-            font-weight: 900;
-        }
-
-        .carte-option.est-selectionne {
-            border-color: var(--succes);
-        }
-
-        .carte-option:hover,
-        .carte-option:focus-visible {
-            background: #fffaf0;
-            box-shadow: 0 12px 22px rgba(0, 0, 0, 0.08);
-            transform: translateY(-2px);
-            outline: none;
-        }
-
-        .carte-option img {
-            width: 150px;
-            height: 110px;
-            object-fit: contain;
-        }
-
-        .actions-modale {
-            display: flex;
-            justify-content: flex-end;
-            gap: 16px;
-        }
-
-        .selecteur-quantite {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 26px;
-            margin: 22px 0 34px;
-        }
-
-        .selecteur-quantite button {
-            width: 64px;
-            height: 64px;
-            border-radius: 50%;
-            background: var(--jaune);
-            font-size: 34px;
-            font-weight: 900;
-        }
-
-        .selecteur-quantite span {
-            min-width: 70px;
-            text-align: center;
-            font-size: 36px;
-            font-weight: 900;
-        }
-
-        .numero-table {
-            display: flex;
-            justify-content: center;
-            gap: 22px;
-            margin: 38px 0;
-        }
-
-        .numero-table input {
-            width: 90px;
-            height: 90px;
-            border: 2px solid var(--ligne);
-            border-radius: 8px;
-            text-align: center;
-            font-size: 48px;
-            font-weight: 900;
-        }
-
-        .remerciement {
-            align-items: center;
-            justify-content: center;
-            padding: 40px;
-            background:
-                linear-gradient(rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.92)),
-                url("/wacdo/images/mc_landing_banner.png") center top / cover no-repeat;
-        }
-
-        .panneau-remerciement {
-            width: min(900px, 92vw);
-            padding: 58px;
-            border-radius: 18px;
-            background: #fff;
-            box-shadow: var(--ombre);
-            text-align: center;
-        }
-
-        .panneau-remerciement h1 {
-            margin: 0 0 32px;
-            font-size: clamp(44px, 6vw, 72px);
-        }
-
-        .panneau-remerciement p {
-            margin: 0 0 18px;
-            font-size: clamp(28px, 4vw, 42px);
-            font-weight: 800;
-            line-height: 1.25;
-        }
-
-        .panneau-remerciement .ticket-final,
-        .panneau-remerciement .total-final {
-            font-size: clamp(24px, 3vw, 34px);
-        }
-
-        .ticket-final strong,
-        .total-final strong {
-            display: block;
-            margin-top: 8px;
-            font-size: clamp(34px, 5vw, 56px);
-        }
-
-        @media (max-width: 1100px) {
-            .disposition-menu {
-                grid-template-columns: 1fr;
-            }
-
-            .panier {
-                min-height: auto;
-                border-left: 0;
-                border-top: 1px solid var(--ligne);
-            }
-
-            .produits {
-                grid-template-columns: repeat(3, minmax(130px, 1fr));
-            }
-        }
-
-        @media (max-width: 760px) {
-            .accueil {
-                padding: 24px;
-                background:
-                    linear-gradient(rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.92)),
-                    url("/wacdo/images/mc_landing_banner.png") center top / auto 38vh no-repeat,
-                    #f2f2f2;
-            }
-
-            .panneau-choix {
-                min-height: auto;
-                padding: 28px;
-            }
-
-            .panneau-choix h1,
-            .panneau-choix p {
-                margin-bottom: 30px;
-            }
-
-            .grille-choix,
-            .grille-options {
-                grid-template-columns: 1fr;
-                gap: 18px;
-            }
-
-            .carte-choix {
-                min-height: 230px;
-            }
-
-            .catalogue {
-                padding: 18px;
-            }
-
-            .barre-haut {
-                align-items: flex-start;
-                flex-direction: column;
-            }
-
-            .onglets {
-                width: 100%;
-            }
-
-            .produits {
-                grid-template-columns: repeat(2, minmax(120px, 1fr));
-                gap: 16px;
-            }
-
-            .carte-produit {
-                min-height: 230px;
-            }
-
-            .panneau-modale {
-                padding: 26px;
-            }
-        }
+:root {
+    --jaune-principal: #ffc836;
+    --texte-principal: #292929;
+    --texte-secondaire: #6e6e6e;
+    --fond-interactif: #f1f1f1;
+    --traits-bordures: #d6d6d6;
+    --rouge-principal: #bd0017;
+    --police-principale: "Source Sans 3", "Source Sans Pro", Arial, sans-serif;
+    --police-titres: "Inter", sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    width: 100vw;
+    height: 100vh;
+    background: #1c1c1c;
+    color: var(--texte-principal);
+    font-family: var(--police-principale);
+    overflow: hidden;
+}
+
+button {
+    border: 0;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+}
+
+img {
+    display: block;
+}
+
+.application {
+    width: 1440px;
+    height: 1024px;
+    flex: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    overflow: hidden;
+    background: #fff;
+    transform-origin: center center;
+}
+
+.ecran {
+    position: absolute;
+    inset: 0;
+    display: none;
+}
+
+.ecran.est-actif {
+    display: block;
+}
+
+.accueil {
+    background: #fff;
+}
+
+.accueil::before,
+.remerciement::before {
+    content: "";
+    position: absolute;
+    top: -7px;
+    left: -164px;
+    width: 1900px;
+    height: 775px;
+    background: url("/wacdo/images/mc_landing_banner.png") center / cover no-repeat;
+    opacity: 0.85;
+    pointer-events: none;
+}
+
+.panneau-choix {
+    position: absolute;
+    top: 244px;
+    left: 287px;
+    width: 698px;
+    padding: 32px;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 4px 4px 6px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+}
+
+.carte-accueil {
+    position: absolute;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 4px 4px 6px rgba(0, 0, 0, 0.25);
+    padding: 32px;
+}
+
+.panneau-choix h1 {
+    font-size: 42px;
+    line-height: 1.05;
+    font-weight: 700;
+}
+
+.panneau-choix p {
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.grille-choix {
+    display: flex;
+    gap: 64px;
+    margin-top: 8px;
+}
+
+.carte-choix {
+    width: 285px;
+    height: 202px;
+    border: 8px solid var(--jaune-principal);
+    border-radius: 8px;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    font-size: 26px;
+    font-weight: 700;
+    transition: transform 0.15s ease;
+}
+
+.carte-choix:hover,
+.carte-choix:focus-visible {
+    transform: scale(1.04);
+    outline: none;
+}
+
+.carte-choix img {
+    width: auto;
+    height: 96px;
+    object-fit: contain;
+}
+
+.ecran-commande {
+    background: #fff;
+}
+
+.disposition-menu {
+    position: absolute;
+    inset: 0;
+}
+
+.catalogue {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 1131px;
+}
+
+.barre-haut {
+    position: absolute;
+    top: 16px;
+    left: 0;
+    width: 1131px;
+    height: 126px;
+    display: flex;
+    align-items: center;
+    gap: 30px;
+    padding: 0 28px;
+}
+
+.fleche-slider {
+    flex: none;
+    width: 56px;
+    height: 86px;
+    background: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.fleche-slider img {
+    width: 86px;
+    height: 56px;
+}
+
+.fleche-gauche img {
+    transform: rotate(-90deg);
+}
+
+.fleche-droite img {
+    transform: rotate(90deg);
+}
+
+.onglets {
+    flex: 1;
+    height: 126px;
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 3px 16px;
+    scroll-behavior: smooth;
+}
+
+.onglets::-webkit-scrollbar {
+    display: none;
+}
+
+.onglet {
+    flex: none;
+    width: 120px;
+    height: 120px;
+    border: 1px solid var(--texte-secondaire);
+    border-radius: 8px;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 6px;
+}
+
+.onglet.est-actif {
+    border: 4px solid var(--jaune-principal);
+}
+
+.onglet img {
+    width: 80px;
+    height: 70px;
+    max-width: 80px;
+    max-height: 70px;
+    object-fit: contain;
+}
+
+.onglet span {
+    color: var(--texte-principal);
+    font-size: 14px;
+    line-height: 1.1;
+    text-align: center;
+}
+
+.titre-section {
+    position: absolute;
+    top: 180px;
+    left: 129px;
+    font-family: var(--police-titres);
+    font-size: 28px;
+    font-weight: 400;
+    color: #000;
+}
+
+.sous-titre-section {
+    position: absolute;
+    top: 222px;
+    left: 130px;
+    font-family: var(--police-titres);
+    font-size: 14px;
+    font-weight: 400;
+    color: #000;
+}
+
+.produits {
+    position: absolute;
+    top: 293px;
+    left: 132px;
+    width: 873px;
+    height: 622px;
+    overflow-y: auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    gap: 16px 20px;
+    padding: 4px;
+}
+
+.produits::-webkit-scrollbar,
+.liste-panier::-webkit-scrollbar {
+    width: 6px;
+}
+
+.produits::-webkit-scrollbar-thumb,
+.liste-panier::-webkit-scrollbar-thumb {
+    background: var(--traits-bordures);
+    border-radius: 3px;
+}
+
+.carte-produit {
+    flex: none;
+    width: 199px;
+    height: 296px;
+    border: 1px solid var(--texte-secondaire);
+    border-radius: 8px;
+    background: #fff;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.carte-produit:hover,
+.carte-produit:focus-visible {
+    border-color: var(--jaune-principal);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.12);
+    outline: none;
+}
+
+.image-produit {
+    width: 199px;
+    height: 200px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.image-produit img {
+    width: 140px;
+    height: 140px;
+    object-fit: contain;
+}
+
+.nom-produit {
+    padding: 14px 12px 0;
+    color: #000;
+    font-size: 20px;
+    line-height: 1.1;
+}
+
+.prix-produit {
+    padding: 4px 12px 0;
+    color: #000;
+    font-size: 18px;
+}
+
+.panier {
+    position: absolute;
+    top: 0;
+    left: 1131px;
+    width: 309px;
+    height: 1024px;
+    background: var(--fond-interactif);
+    display: flex;
+    flex-direction: column;
+    padding: 30px 25px;
+}
+
+.entete-panier {
+    text-align: center;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--traits-bordures);
+}
+
+.entete-panier h2 {
+    font-size: 14px;
+    font-weight: 400;
+}
+
+.numero-commande {
+    font-size: 42px;
+    font-weight: 400;
+    margin: 4px 0;
+}
+
+.mode-ticket {
+    font-size: 14px;
+}
+
+.liste-panier {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 18px 0;
+    list-style: none;
+}
+
+.panier-vide {
+    margin-top: 20px;
+    color: var(--texte-secondaire);
+    font-size: 14px;
+    text-align: center;
+}
+
+.element-panier {
+    position: relative;
+    padding-right: 32px;
+    border-bottom: 0;
+    color: #000;
+    font-size: 14px;
+}
+
+.ligne-panier {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-weight: 700;
+}
+
+.options-panier {
+    margin-top: 2px;
+    padding-left: 21px;
+    line-height: 1.3;
+}
+
+.bouton-supprimer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 24px;
+    height: 24px;
+    background: none;
+    padding: 0;
+}
+
+.bouton-supprimer img {
+    width: 24px;
+    height: 24px;
+}
+
+.total {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--traits-bordures);
+}
+
+.libelle-total {
+    font-size: 22px;
+    line-height: 1.1;
+}
+
+.prix-total {
+    font-size: 42px;
+    font-weight: 700;
+}
+
+.actions-panier {
+    display: flex;
+    gap: 12px;
+}
+
+.bouton {
+    min-height: 54px;
+    border-radius: 8px;
+    padding: 16px 32px;
+    background: var(--jaune-principal);
+    color: var(--texte-principal);
+    font-size: 18px;
+    font-weight: 700;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.actions-panier .bouton {
+    flex: 1;
+    padding: 12px 14px;
+}
+
+.bouton.danger,
+.bouton.secondaire {
+    border: 2px solid #000;
+    background: transparent;
+    font-size: 16px;
+    font-weight: 400;
+}
+
+.bouton:disabled {
+    cursor: wait;
+    opacity: 0.65;
+}
+
+.message-commande {
+    display: none;
+    margin-top: 12px;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.message-commande.est-visible {
+    display: block;
+}
+
+.message-commande.est-erreur {
+    background: #fff1f2;
+    color: var(--rouge-principal);
+}
+
+.message-commande.est-info {
+    background: #fff7dc;
+}
+
+.modale {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.45);
+}
+
+.modale.est-ouverte {
+    display: flex;
+}
+
+.panneau-modale {
+    position: relative;
+    width: 1063px;
+    max-height: 900px;
+    overflow: auto;
+    border-radius: 16px;
+    background: #fff;
+    padding: 54px 64px;
+}
+
+.bouton-fermer {
+    position: absolute;
+    top: 22px;
+    right: 22px;
+    width: 32px;
+    height: 32px;
+    background: none;
+    color: var(--texte-principal);
+    font-size: 28px;
+    line-height: 1;
+}
+
+.bouton-retour {
+    position: absolute;
+    top: 20px;
+    left: 24px;
+    padding: 12px 28px;
+}
+
+.bouton-retour[hidden],
+.etape-menu[hidden] {
+    display: none;
+}
+
+.fenetre-menu {
+    min-height: 550px;
+}
+
+.etape-menu {
+    padding-top: 28px;
+}
+
+.panneau-modale h2 {
+    font-size: 26px;
+    font-weight: 700;
+}
+
+.panneau-modale p {
+    margin-top: 8px;
+    margin-bottom: 24px;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.grille-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 32px 62px;
+    margin-bottom: 32px;
+}
+
+.slider-boisson {
+    flex-wrap: nowrap;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 12px 4px;
+}
+
+.slider-boisson .carte-option {
+    flex: none;
+    width: 166px;
+    height: auto;
+    min-height: 236px;
+    border: 1px solid var(--texte-secondaire);
+    padding: 8px;
+    justify-content: flex-start;
+    gap: 16px;
+}
+
+.slider-boisson .carte-option.est-selectionne {
+    border: 4px solid var(--jaune-principal);
+}
+
+.slider-boisson .carte-option img {
+    width: 150px;
+    height: 150px;
+}
+
+.slider-boisson .carte-option span {
+    font-size: 20px;
+    font-weight: 400;
+}
+
+.carte-option {
+    width: 285px;
+    height: 202px;
+    border: 2px solid var(--traits-bordures);
+    border-radius: 8px;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px;
+    overflow: hidden;
+}
+
+.carte-option.est-selectionne {
+    border: 8px solid var(--jaune-principal);
+}
+
+.carte-option img {
+    max-width: 170px;
+    height: 92px;
+    object-fit: contain;
+}
+
+.carte-option span {
+    font-size: 24px;
+    line-height: 1.08;
+    font-weight: 700;
+    text-align: center;
+}
+
+.carte-option small {
+    color: #000;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.actions-modale {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    margin-top: 40px;
+}
+
+.selecteur-quantite {
+    width: 283px;
+    margin: 32px auto;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    overflow: hidden;
+}
+
+.selecteur-quantite button {
+    width: 76px;
+    height: 76px;
+    border-radius: 8px;
+    background: var(--jaune-principal);
+    font-size: 40px;
+    font-weight: 700;
+}
+
+.selecteur-quantite span {
+    font-size: 40px;
+    font-weight: 700;
+}
+
+.numero-table {
+    display: flex;
+    justify-content: center;
+    gap: 50px;
+    margin: 32px 0;
+}
+
+.numero-table input {
+    width: 155px;
+    height: 120px;
+    border: 0;
+    border-bottom: 15px solid var(--jaune-principal);
+    text-align: center;
+    font-size: 96px;
+    font-weight: 700;
+}
+
+.remerciement {
+    background: #fff;
+}
+
+.panneau-remerciement {
+    position: absolute;
+    top: 338px;
+    left: 194px;
+    width: 698px;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 4px 4px 6px rgba(0, 0, 0, 0.25);
+    padding: 32px;
+}
+
+.panneau-remerciement h1,
+.panneau-remerciement p:last-of-type {
+    font-size: 42px;
+    font-weight: 700;
+}
+
+.panneau-remerciement p {
+    margin-top: 24px;
+    font-size: 26px;
+}
+
+.ticket-final,
+.total-final {
+    font-weight: 700;
+}

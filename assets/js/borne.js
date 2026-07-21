@@ -2,90 +2,82 @@ const DETAILS_CATEGORIES = {
     menus: {
         libelle: "Menus",
         titre: "Nos menus",
-        description: "Un sandwich, une friture ou une salade et une boisson"
+        description: "Un sandwich, une friture ou une salade et une boisson",
+        image: "/wacdo/categories/menus.png"
     },
     burgers: {
-        libelle: "Sandwiches",
-        titre: "Nos Sandwiches",
-        description: "Les classiques Wacdo préparés à la commande"
+        libelle: "Burgers",
+        titre: "Nos Burgers",
+        description: "Préparés minute, juste pour vous",
+        image: "/wacdo/categories/burgers.png"
     },
     wraps: {
         libelle: "Wraps",
         titre: "Nos Wraps",
-        description: "Du poulet, du fromage et des recettes faciles à emporter"
+        description: "À déguster sur le pouce",
+        image: "/wacdo/categories/wraps.png"
     },
     frites: {
         libelle: "Frites",
-        titre: "Nos accompagnements",
-        description: "Frites, potatoes, la pomme de terre dans tous ses états"
+        titre: "Nos Frites",
+        description: "Croustillantes à souhait",
+        image: "/wacdo/categories/frites.png"
     },
     boissons: {
-        libelle: "Boissons Froides",
+        libelle: "Boissons",
         titre: "Nos Boissons Fraîches",
-        description: "Une petite soif, sucrée, légère, rafraîchissante"
+        description: "Une petite soif, sucrée, légère, rafraîchissante",
+        image: "/wacdo/categories/boissons.png"
     },
     encas: {
-        libelle: "Encas",
-        titre: "Nos encas",
-        description: "Une petite faim à ajouter à votre commande"
+        libelle: "En-cas",
+        titre: "Nos En-cas",
+        description: "Pour les petites faims",
+        image: "/wacdo/categories/encas.png"
+    },
+    salades: {
+        libelle: "Salades",
+        titre: "Nos Salades",
+        description: "Fraîcheur et équilibre",
+        image: "/wacdo/categories/salades.png"
     },
     desserts: {
         libelle: "Desserts",
-        titre: "Nos desserts",
-        description: "Terminez votre commande sur une touche sucrée"
+        titre: "Nos Desserts",
+        description: "Une petite douceur pour finir",
+        image: "/wacdo/categories/desserts.png"
+    },
+    sauces: {
+        libelle: "Sauces",
+        titre: "Nos Sauces",
+        description: "Pour accompagner frites et nuggets",
+        image: "/wacdo/categories/sauces.png"
     }
 };
 
-const ORDRE_CATEGORIES = ["menus", "burgers", "wraps", "frites", "boissons", "encas", "desserts"];
+const ORDRE_CATEGORIES = ["menus", "boissons", "burgers", "frites", "encas", "wraps", "salades", "desserts", "sauces"];
 const API_BASE = (window.API_BASE || document.querySelector('meta[name="api-base"]')?.content || "https://quentin-wacdo.stark.a3n.fr/api").replace(/\/$/, "");
+const CHEMINS_API = {
+    catalogue: `${API_BASE}/catalogue`,
+    commandes: `${API_BASE}/commandes`
+};
 const SOURCE_DONNEES = "api";
 const URL_DONNEES = {
     static: "/wacdo/produits.json",
-    api: `${API_BASE}/catalogue`
+    api: CHEMINS_API.catalogue
 };
-
-const GROUPES_OPTIONS_MENU = {
-    sizes: {
-        conteneur: "options-taille-menu",
-        cleEtat: "tailleMenu",
-        options: []
-    },
-    sides: {
-        conteneur: "options-accompagnement",
-        cleEtat: "accompagnement",
-        options: [
-            { libelle: "Frites", image: "/wacdo/frites/GRANDE_FRITE.png" },
-            { libelle: "Potatoes", image: "/wacdo/frites/POTATOES.png" }
-        ]
-    },
-    drinks: {
-        conteneur: "options-boisson",
-        cleEtat: "boissonMenu",
-        options: [
-            { libelle: "Eau" },
-            { libelle: "Coca Cola" },
-            { libelle: "Coca Sans Sucres" },
-            { libelle: "Jus de Pommes Bio" },
-            { libelle: "Ice Tea Citron" }
-        ]
-    }
-};
-
-const TAILLES_BOISSON = ["30Cl", "50Cl"];
 
 const etat = {
     categorieActive: "menus",
-    mode: "Sur place",
+    mode: "sur_place",
     produits: {},
     panier: [],
     produitSelectionne: null,
     commandeEnCours: false,
     commandeFinalisee: null,
     tailleMenu: "M",
-    accompagnement: "Frites",
-    boissonMenu: "Coca Cola",
-    tailleBoisson: "30Cl",
-    quantiteBoisson: 1
+    quantiteBoisson: 1,
+    etapeMenu: 1
 };
 
 const elements = {
@@ -100,15 +92,32 @@ const elements = {
     numeroCommande: document.querySelector("#numero-commande"),
     messageCommande: document.querySelector("#message-commande"),
     boutonPayer: document.querySelector("#payer-commande"),
-    boutonTable: document.querySelector("#enregistrer-table"),
+    boutonCategoriesGauche: document.querySelector("#categories-gauche"),
+    boutonCategoriesDroite: document.querySelector("#categories-droite"),
+    boutonMenuRetour: document.querySelector("#menu-retour"),
+    boutonMenuSuivant: document.querySelector("#menu-suivant"),
     ticketFinal: document.querySelector("#ticket-final"),
     totalFinal: document.querySelector("#total-final"),
     quantiteBoisson: document.querySelector("#quantite-boisson")
 };
 
+function ajusterEchelleBorne() {
+    const application = document.querySelector(".application");
+    if (!application) {
+        return;
+    }
+
+    const margeSecurite = 0.88;
+    const decalageVertical = -24;
+    const scale = Math.min(window.innerWidth / 1440, window.innerHeight / 1024) * margeSecurite;
+    application.style.transform = `translate(-50%, calc(-50% + ${decalageVertical}px)) scale(${scale})`;
+}
+
 init();
+window.addEventListener("resize", ajusterEchelleBorne);
 
 async function init() {
+    ajusterEchelleBorne();
     etat.produits = await chargerProduits();
     afficherOnglets();
     afficherProduits();
@@ -216,14 +225,15 @@ function lierEvenements() {
     elements.onglets.addEventListener("click", gererClicCategorie);
     elements.grille.addEventListener("click", gererClicProduit);
     document.querySelector("#modale-menu").addEventListener("click", gererClicOptionMenu);
-    document.querySelector("#modale-boisson").addEventListener("click", gererClicOptionBoisson);
-    document.querySelector("#ajouter-menu").addEventListener("click", ajouterMenuConfigure);
+    elements.boutonMenuSuivant.addEventListener("click", avancerMenu);
+    elements.boutonMenuRetour.addEventListener("click", reculerMenu);
     document.querySelector("#ajouter-boisson").addEventListener("click", ajouterBoissonConfigure);
     document.querySelector("#augmenter-boisson").addEventListener("click", () => modifierQuantiteBoisson(1));
     document.querySelector("#diminuer-boisson").addEventListener("click", () => modifierQuantiteBoisson(-1));
     document.querySelector("#abandon-commande").addEventListener("click", reinitialiserCommande);
     document.querySelector("#payer-commande").addEventListener("click", commencerPaiement);
-    document.querySelector("#enregistrer-table").addEventListener("click", terminerCommande);
+    elements.boutonCategoriesGauche.addEventListener("click", () => elements.onglets.scrollBy({ left: -300, behavior: "smooth" }));
+    elements.boutonCategoriesDroite.addEventListener("click", () => elements.onglets.scrollBy({ left: 300, behavior: "smooth" }));
     document.querySelector("#nouvelle-commande").addEventListener("click", reinitialiserCommande);
 
     document.querySelectorAll("[data-fermer-modale]").forEach((bouton) => {
@@ -272,31 +282,19 @@ function gererClicOptionMenu(evenement) {
         return;
     }
 
-    const groupe = Object.values(GROUPES_OPTIONS_MENU).find((ligne) => ligne.conteneur === option.parentElement.id);
-
-    if (!groupe) {
+    if (option.parentElement.id !== "options-taille-menu") {
         return;
     }
 
-    etat[groupe.cleEtat] = option.dataset.valeur;
-    selectionnerOption(groupe.conteneur, option.dataset.valeur);
-}
-
-function gererClicOptionBoisson(evenement) {
-    const option = evenement.target.closest(".carte-option");
-
-    if (!option) {
-        return;
-    }
-
-    etat.tailleBoisson = option.dataset.valeur;
-    selectionnerOption("options-taille-boisson", etat.tailleBoisson);
+    etat.tailleMenu = option.dataset.valeur;
+    selectionnerOption("options-taille-menu", etat.tailleMenu);
 }
 
 function afficherOnglets() {
     elements.onglets.innerHTML = categoriesVisibles().map((categorie) => `
         <button class="onglet ${categorie.id === etat.categorieActive ? "est-actif" : ""}" type="button" data-categorie="${categorie.id}">
-            ${categorie.libelle}
+            <img src="${echapperHtml(categorie.image)}" alt="">
+            <span>${categorie.libelle}</span>
         </button>
     `).join("");
 }
@@ -309,15 +307,15 @@ function afficherProduits() {
     elements.description.textContent = categorie.description;
     elements.grille.innerHTML = produits.map((produit, index) => `
         <button class="carte-produit" type="button" data-produit="${index}">
-            <img src="${echapperHtml(produit.image)}" alt="">
-            <strong>${echapperHtml(produit.nom)}</strong>
-            <span class="prix">${formaterPrix(produit.prix)}</span>
+            <div class="image-produit"><img src="${echapperHtml(produit.image)}" alt=""></div>
+            <div class="nom-produit">${echapperHtml(produit.nom)}</div>
+            <div class="prix-produit">${formaterPrix(produit.prix)}</div>
         </button>
     `).join("");
 }
 
 function afficherPanier() {
-    elements.modeTicket.textContent = etat.mode;
+    elements.modeTicket.textContent = libelleModeService(etat.mode);
 
     if (etat.panier.length === 0) {
         elements.listePanier.innerHTML = `<li class="panier-vide">Votre commande est vide</li>`;
@@ -332,10 +330,23 @@ function afficherPanier() {
                 <span>${formaterPrix(ligne.prix * ligne.quantite)}</span>
             </div>
             ${afficherOptionsPanier(ligne.options)}
+            <button class="bouton-supprimer" type="button" data-supprimer-panier="${echapperHtml(ligne.cle)}" aria-label="Supprimer">
+                <img src="/wacdo/images/supprimer.png" alt="">
+            </button>
         </li>
     `).join("");
+    document.querySelectorAll("[data-supprimer-panier]").forEach((button) => {
+        button.addEventListener("click", () => {
+            etat.panier = etat.panier.filter((ligne) => ligne.cle !== button.dataset.supprimerPanier);
+            afficherPanier();
+        });
+    });
 
     elements.total.textContent = formaterPrix(totalPanier());
+}
+
+function libelleModeService(mode) {
+    return mode === "a_emporter" ? "A emporter" : "Sur place";
 }
 
 function afficherOptionsPanier(options) {
@@ -357,7 +368,17 @@ function totalPanier() {
 }
 
 function ajouterAuPanier(ligne) {
-    etat.panier.push(ligne);
+    const cle = `${ligne.type}|${ligne.id}|${ligne.taille || ""}|${ligne.options.join(",")}`;
+    const existante = etat.panier.find((item) => item.cle === cle);
+
+    if (existante) {
+        existante.quantite += ligne.quantite;
+    } else {
+        if (ligne.type === "menus") {
+            etat.panier = etat.panier.filter((item) => item.type !== "menus" || item.id !== ligne.id);
+        }
+        etat.panier.push({ ...ligne, cle });
+    }
     effacerMessageCommande();
     afficherPanier();
 }
@@ -376,15 +397,11 @@ function creerLignePanier(produit, surcharges = {}) {
 
 function preparerModaleMenu(produit) {
     etat.produitSelectionne = produit;
-    etat.tailleMenu = "M";
-    etat.accompagnement = "Frites";
-    etat.boissonMenu = "Coca Cola";
+    etat.tailleMenu = "L";
+    etat.etapeMenu = 1;
 
-    Object.values(GROUPES_OPTIONS_MENU).forEach((groupe) => {
-        const options = groupe.cleEtat === "tailleMenu" ? optionsTaillesMenu(produit) : groupe.options;
-        afficherCartesOptions(groupe.conteneur, options, etat[groupe.cleEtat]);
-    });
-
+    afficherCartesOptions("options-taille-menu", optionsTaillesMenu(produit), etat.tailleMenu);
+    afficherEtapeMenu(1);
     ouvrirModale("#modale-menu");
 }
 
@@ -392,10 +409,28 @@ function optionsTaillesMenu(produit) {
     const prixTailles = prixTaillesMenu(produit);
 
     return [
-        { libelle: "S", description: `Menu S - ${formaterPrix(prixTailles.S)}`, image: "/wacdo/images/illustration-best-of.png" },
-        { libelle: "M", description: `Menu M - ${formaterPrix(prixTailles.M)}`, image: "/wacdo/images/illustration-best-of.png" },
-        { libelle: "L", description: `Menu L - ${formaterPrix(prixTailles.L)}`, image: "/wacdo/images/illustration-maxi-best-of.png" }
+        { valeur: "L", libelle: "Menu Maxi Best Of", prix: prixTailles.L, image: produit.image },
+        { valeur: "M", libelle: "Menu Best Of", prix: prixTailles.M, image: produit.image }
     ];
+}
+
+function afficherEtapeMenu(etape) {
+    etat.etapeMenu = etape;
+    document.querySelectorAll("#modale-menu .etape-menu").forEach((section) => {
+        section.hidden = Number(section.dataset.etape) !== etape;
+    });
+    elements.boutonMenuRetour.hidden = true;
+    elements.boutonMenuSuivant.textContent = "Ajouter à ma commande";
+}
+
+function avancerMenu() {
+    ajouterMenuConfigure();
+}
+
+function reculerMenu() {
+    if (etat.etapeMenu > 1) {
+        afficherEtapeMenu(etat.etapeMenu - 1);
+    }
 }
 
 function prixTaillesMenu(produit) {
@@ -410,14 +445,8 @@ function prixTaillesMenu(produit) {
 
 function preparerModaleBoisson(produit) {
     etat.produitSelectionne = produit;
-    etat.tailleBoisson = "30Cl";
     etat.quantiteBoisson = 1;
     elements.quantiteBoisson.textContent = etat.quantiteBoisson;
-    afficherCartesOptions(
-        "options-taille-boisson",
-        TAILLES_BOISSON.map((libelle) => ({ libelle, image: produit.image })),
-        etat.tailleBoisson
-    );
     ouvrirModale("#modale-boisson");
 }
 
@@ -425,9 +454,10 @@ function afficherCartesOptions(idConteneur, options, selection) {
     const conteneur = document.querySelector(`#${idConteneur}`);
 
     conteneur.innerHTML = options.map((option) => `
-        <button class="carte-option ${option.libelle === selection ? "est-selectionne" : ""}" type="button" data-valeur="${option.libelle}">
+        <button class="carte-option ${(option.valeur || option.libelle) === selection ? "est-selectionne" : ""}" type="button" data-valeur="${echapperHtml(option.valeur || option.libelle)}">
             ${option.image ? `<img src="${echapperHtml(option.image)}" alt="">` : ""}
             <span>${echapperHtml(option.description || option.libelle)}</span>
+            ${option.prix !== undefined ? `<small>${formaterPrix(option.prix)}</small>` : ""}
         </button>
     `).join("");
 }
@@ -438,22 +468,19 @@ function ajouterMenuConfigure() {
 
     ajouterAuPanier(creerLignePanier(produit, {
         type: "menus",
-        nom: `Menu ${etat.tailleMenu} ${produit.nom.replace(/^Menu\s/, "")}`,
+        nom: `${etat.tailleMenu === "L" ? "Menu Maxi Best Of" : "Menu Best Of"} ${produit.nom.replace(/^Menu\s/, "")}`,
         prix: prixMenu,
         taille: etat.tailleMenu,
-        options: [etat.accompagnement.toLowerCase(), etat.boissonMenu.toLowerCase(), "ketchup", "sauce deluxe"]
+        options: [`Taille ${etat.tailleMenu}`]
     }));
     fermerModales();
 }
 
 function ajouterBoissonConfigure() {
     const produit = etat.produitSelectionne;
-    const supplement = etat.tailleBoisson === "50Cl" ? 0.50 : 0;
 
     ajouterAuPanier(creerLignePanier(produit, {
-        prix: produit.prix + supplement,
-        quantite: etat.quantiteBoisson,
-        options: [etat.tailleBoisson]
+        quantite: etat.quantiteBoisson
     }));
     fermerModales();
 }
@@ -466,6 +493,7 @@ function modifierQuantiteBoisson(step) {
 function reinitialiserCommande() {
     etat.panier = [];
     etat.commandeFinalisee = null;
+    etat.mode = "sur_place";
     etat.categorieActive = "menus";
     elements.numeroCommande.textContent = "--";
     effacerMessageCommande();
@@ -478,11 +506,6 @@ function reinitialiserCommande() {
 async function commencerPaiement() {
     if (etat.panier.length === 0) {
         afficherMessageCommande("Ajoutez au moins un produit avant de payer.", "info");
-        return;
-    }
-
-    if (etat.mode === "Sur place") {
-        ouvrirModale("#modale-table");
         return;
     }
 
@@ -528,7 +551,7 @@ async function envoyerCommande() {
             .map((ligne) => ({ id: ligne.id, quantite: ligne.quantite, taille: ligne.taille || "M" }))
     };
 
-    const reponse = await fetch(`${API_BASE}/commandes`, {
+    const reponse = await fetch(CHEMINS_API.commandes, {
         method: "POST",
         credentials: "include",
         headers: {
@@ -569,9 +592,7 @@ function effacerMessageCommande() {
 
 function mettreAJourEtatEnvoi() {
     elements.boutonPayer.disabled = etat.commandeEnCours;
-    elements.boutonTable.disabled = etat.commandeEnCours;
     elements.boutonPayer.textContent = etat.commandeEnCours ? "Envoi..." : "Payer";
-    elements.boutonTable.textContent = etat.commandeEnCours ? "Envoi..." : "Enregistrer le numéro";
 }
 
 function messageErreurCommande(error) {

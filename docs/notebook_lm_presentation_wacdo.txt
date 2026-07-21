@@ -1,0 +1,837 @@
+DOSSIER TEXTE POUR GOOGLE NOTEBOOK LM
+PROJET WACDO - PRESENTATION EXAMEN
+
+Ce document sert de source complète pour générer une présentation orale ou un PowerPoint sur le projet WACDO.
+Il peut être copié dans un PDF puis importé dans Google NotebookLM.
+
+Important :
+- Ne pas inclure de vrais identifiants de connexion dans une présentation.
+- Ne pas présenter le projet comme totalement terminé.
+- Présenter le projet comme un MVP fonctionnel avec des évolutions prévues.
+- Préciser qu'un framework front est en préparation pour une future version.
+
+
+1. PRESENTATION GENERALE DU PROJET
+
+Le projet s'appelle WACDO.
+
+WACDO est une application web de commande inspirée d'une borne de restauration rapide.
+
+Le projet contient trois grandes parties :
+
+1. Une borne client :
+   - elle permet de consulter un catalogue ;
+   - elle permet de choisir des produits ou des menus ;
+   - elle permet de constituer un panier ;
+   - elle permet d'envoyer une commande au backend.
+
+2. Une API backend :
+   - elle fournit le catalogue ;
+   - elle reçoit les commandes ;
+   - elle calcule les prix ;
+   - elle vérifie les disponibilités ;
+   - elle met à jour les stocks ;
+   - elle protège les routes sensibles.
+
+3. Un back-office :
+   - il permet aux employés, managers ou administrateurs de se connecter ;
+   - il permet de consulter les commandes ;
+   - il permet de voir le détail d'une commande ;
+   - il permet de changer les statuts ;
+   - il permet de consulter et modifier certains produits, menus et ingrédients.
+
+Objectif du projet :
+Permettre à un client de passer une commande simplement depuis une borne, tout en donnant au restaurant un outil de suivi et de gestion côté back-office.
+
+
+2. ETAT ACTUEL DU PROJET
+
+Le projet est fonctionnel en version MVP.
+
+Fonctionnalités déjà présentes :
+
+- API PHP opérationnelle.
+- Catalogue produits, menus et catégories.
+- Création de commande depuis la borne.
+- Calcul des prix côté serveur.
+- Gestion des statuts de commande.
+- Gestion du stock ingrédients.
+- Débit du stock lors d'une commande.
+- Recrédit du stock si une commande est annulée.
+- Authentification par session PHP.
+- Gestion des rôles pour le back-office.
+- Back-office protégé.
+- Images stockées en base de données et exposées à l'API.
+- Front borne connecté à l'API.
+
+Fonctionnalités encore à finaliser :
+
+- Finalisation visuelle complète du front.
+- Gestion avancée des options de menu.
+- Stockage du numéro de chevalet.
+- Gestion des tailles de boisson 30 Cl / 50 Cl.
+- Gestion du supplément boisson côté backend.
+- Affichage complet des options dans le back-office.
+- Tests automatisés plus complets.
+- Journalisation des actions administrateur.
+- Migration future vers un framework front.
+
+Le front actuel est en HTML, CSS et JavaScript vanilla.
+Un framework front est prévu ou en préparation pour une future version plus modulaire.
+
+
+3. TECHNOLOGIES UTILISEES
+
+Frontend actuel :
+- HTML pour la structure.
+- CSS pour l'apparence.
+- JavaScript vanilla pour les interactions.
+
+Frontend futur :
+- Un framework front est prévu en préparation.
+- L'objectif est de rendre l'interface plus maintenable, modulaire et évolutive.
+
+Backend :
+- PHP 8.3.
+- Architecture MVC simple.
+- Programmation orientée objet.
+- API REST JSON.
+- PDO pour communiquer avec la base de données.
+
+Base de données :
+- MariaDB.
+- Modèle relationnel.
+
+Infrastructure :
+- Docker.
+- Apache.
+- Conteneur PHP pour l'API et le back-office.
+- Conteneur front statique pour la borne.
+- MariaDB dans un conteneur.
+- Traefik pour l'exposition HTTPS.
+
+
+4. JUSTIFICATION DES CHOIX TECHNIQUES
+
+Pourquoi PHP ?
+
+PHP est adapté au développement web côté serveur.
+Il fonctionne bien avec Apache.
+Il permet de créer rapidement une API REST.
+Il permet de montrer clairement les notions de contrôleur, modèle, repository, session, sécurité et accès base de données.
+
+Le projet n'utilise pas de framework PHP lourd afin de rendre visibles les mécanismes internes :
+- routage ;
+- lecture des requêtes JSON ;
+- création des réponses JSON ;
+- sessions ;
+- rôles ;
+- accès SQL avec PDO.
+
+Pourquoi MariaDB ?
+
+MariaDB est une base relationnelle adaptée au projet, car les données sont fortement liées.
+
+Exemples de relations :
+- une commande peut contenir plusieurs produits ;
+- une commande peut contenir plusieurs menus ;
+- un menu est composé de produits ;
+- un produit dépend d'ingrédients ;
+- un utilisateur possède un rôle ;
+- une commande possède un statut ;
+- une commande provient d'un canal.
+
+Pourquoi Docker ?
+
+Docker permet d'isoler les services.
+Le projet peut tourner avec les mêmes versions de PHP, Apache et MariaDB.
+Docker évite les problèmes d'environnement entre le développement et le serveur.
+
+Pourquoi séparer front et back ?
+
+La borne client est séparée du backend.
+Elle consomme l'API via des requêtes HTTP.
+
+Avantages :
+- séparation claire des responsabilités ;
+- le front ne contient pas le code PHP ;
+- le backend reste responsable des prix, du stock et de la sécurité ;
+- le front peut évoluer vers un framework sans réécrire tout le backend.
+
+
+5. ARCHITECTURE GENERALE DU PROJET
+
+Le projet est organisé autour de trois blocs :
+
+1. Front borne :
+   - fichier principal : index.html ;
+   - style : assets/css/borne.css ;
+   - logique : assets/js/borne.js.
+
+2. Backend API et back-office :
+   - point d'entrée : index.php ;
+   - contrôleurs : app/Controllers ;
+   - modèles : app/Models ;
+   - repositories : app/Repositories ;
+   - sécurité : app/Security ;
+   - outils HTTP : app/Http.
+
+3. Base de données :
+   - MariaDB ;
+   - architecture documentée dans wacdo/architecture.
+
+Structure simplifiée :
+
+Wacdo_quentin/
+  index.php
+  index.html
+  docker-compose.yml
+  config/database.php
+  app/Controllers/
+  app/Models/
+  app/Repositories/
+  app/Http/
+  app/Security/
+  app/Views/
+  assets/css/
+  assets/js/
+  wacdo/architecture/
+
+
+6. ARCHITECTURE MVC
+
+Le projet suit une architecture proche du MVC.
+
+MVC signifie :
+- Model : représente les données métier.
+- View : affiche l'interface.
+- Controller : reçoit les requêtes et coordonne les traitements.
+
+Dans WACDO :
+
+- Les Models sont dans app/Models.
+- Les Views sont dans app/Views et index.html.
+- Les Controllers sont dans app/Controllers.
+- Les accès SQL sont séparés dans app/Repositories.
+
+Exemple :
+
+CommandeController reçoit une demande de création de commande.
+Il valide les données.
+Il appelle DbCommandeRepository.
+DbCommandeRepository insère la commande en base.
+La réponse est renvoyée en JSON.
+
+
+7. ROLE DES REPOSITORIES
+
+Les repositories sont des classes responsables de l'accès à la base de données.
+
+Ils évitent de mettre les requêtes SQL directement dans les contrôleurs.
+
+Repositories principaux :
+
+- DbCommandeRepository.php
+- DbProduitRepository.php
+- DbMenuRepository.php
+- DbIngredientRepository.php
+- DbUtilisateurRepository.php
+- DbCategorieRepository.php
+
+Avantages :
+- code plus organisé ;
+- responsabilités séparées ;
+- contrôleurs plus lisibles ;
+- SQL centralisé.
+
+
+8. PROGRAMMATION ORIENTEE OBJET
+
+Le backend est écrit en PHP orienté objet.
+
+La programmation orientée objet consiste à organiser le code autour de classes et d'objets.
+
+Une classe est un plan.
+Un objet est une instance de ce plan.
+
+Exemples dans le projet :
+
+- Produit représente un produit.
+- Menu représente un menu.
+- Commande représente une commande.
+- Ingredient représente un ingrédient.
+- Utilisateur représente un utilisateur.
+
+Classes importantes :
+
+Models :
+- Produit
+- Menu
+- Commande
+- CommandeProduit
+- CommandeMenu
+- Ingredient
+- Utilisateur
+- Role
+- Canal
+- Categorie
+- StatutCommande
+
+Controllers :
+- ApiController
+- CommandeController
+- AuthController
+- IngredientController
+- UtilisateurController
+
+Repositories :
+- DbCommandeRepository
+- DbProduitRepository
+- DbMenuRepository
+- DbIngredientRepository
+- DbUtilisateurRepository
+
+
+9. API DU PROJET
+
+L'API est exposée via des routes /api.
+
+Routes catalogue :
+- GET /api/health
+- GET /api/catalogue
+- GET /api/categories
+- GET /api/produits
+- GET /api/produits/{id}
+- GET /api/menus
+
+Routes commande :
+- POST /api/commandes
+- GET /api/commandes
+- GET /api/commandes/{id}
+- PATCH /api/commandes/{id}/statut
+
+Routes authentification :
+- POST /api/auth/login
+- POST /api/auth/logout
+- GET /api/auth/me
+
+Routes back-office :
+- GET /api/utilisateurs
+- POST /api/utilisateurs
+- GET /api/ingredients
+- PATCH /api/ingredients/{id}
+- PATCH /api/produits/{id}
+- PATCH /api/menus/{id}
+
+La route POST /api/commandes est publique pour permettre à la borne de créer une commande.
+Les routes de gestion sont protégées par session et rôle.
+
+
+10. FRONT BORNE
+
+Fichiers principaux :
+- index.html
+- assets/css/borne.css
+- assets/js/borne.js
+
+Le fichier index.html contient la structure de la borne :
+- écran d'accueil ;
+- choix sur place / à emporter ;
+- écran chevalet ;
+- écran commande ;
+- panier ;
+- modales ;
+- écran de remerciement.
+
+Le fichier borne.css contient :
+- dimensions ;
+- couleurs ;
+- placement des cartes ;
+- catégories ;
+- panier ;
+- modales ;
+- mise à l'échelle de la borne.
+
+Le fichier borne.js contient :
+- chargement du catalogue ;
+- affichage des catégories ;
+- affichage des produits ;
+- gestion du panier ;
+- envoi de la commande ;
+- ouverture et fermeture des modales ;
+- changement d'écran.
+
+Fonctions importantes :
+- chargerProduits
+- afficherOnglets
+- afficherProduits
+- afficherPanier
+- envoyerCommande
+- ouvrirModale
+- fermerModales
+
+Le front actuel a été rendu compatible avec le backend.
+Il n'envoie pas encore les options avancées qui ne sont pas stockées côté backend.
+
+
+11. BACK-OFFICE
+
+Fichiers principaux :
+- app/Views/back_office.php
+- assets/css/back-office.css
+- assets/js/back-office.js
+
+Fonctionnalités actuelles :
+- connexion ;
+- récupération de la session ;
+- affichage des commandes ;
+- détail de commande ;
+- changement de statut ;
+- affichage catalogue ;
+- modification produit/menu ;
+- affichage ingrédients ;
+- modification stock ingrédient ;
+- affichage utilisateurs.
+
+Le back-office consomme l'API.
+Les routes sensibles sont protégées.
+
+
+12. BASE DE DONNEES
+
+La base est relationnelle.
+
+Tables principales :
+- roles
+- utilisateurs
+- statuts_commandes
+- canaux
+- commandes
+- produits
+- menus
+- categories
+- ingredients
+- commande_produit
+- commande_menu
+- menu_produit
+- ingredients_produits
+- produits_categories
+
+Tables d'association :
+- commande_produit
+- commande_menu
+- menu_produit
+- ingredients_produits
+- produits_categories
+
+Ces tables permettent de gérer les relations plusieurs-à-plusieurs.
+
+Exemple :
+Un menu peut contenir plusieurs produits.
+Un produit peut appartenir à plusieurs menus.
+La relation est donc représentée par la table menu_produit.
+
+
+13. MCD DU PROJET
+
+Le MCD décrit les entités principales et leurs relations.
+
+Entités principales :
+- ROLES
+- UTILISATEURS
+- STATUTS_COMMANDES
+- CANAUX
+- COMMANDES
+- PRODUITS
+- MENUS
+- CATEGORIES
+- INGREDIENTS
+
+Associations principales :
+
+- Un rôle est attribué à plusieurs utilisateurs.
+- Un utilisateur peut passer plusieurs commandes.
+- Un statut définit plusieurs commandes.
+- Un canal identifie l'origine de plusieurs commandes.
+- Une commande contient des produits.
+- Une commande contient des menus.
+- Un menu est composé de produits.
+- Un produit contient des ingrédients.
+- Un produit est classé dans des catégories.
+
+Version texte du MCD :
+
+ROLES 1,N UTILISATEURS
+UTILISATEURS 0,N COMMANDES
+STATUTS_COMMANDES 1,N COMMANDES
+CANAUX 1,N COMMANDES
+COMMANDES 1,N COMMANDE_PRODUIT
+PRODUITS 1,N COMMANDE_PRODUIT
+COMMANDES 1,N COMMANDE_MENU
+MENUS 1,N COMMANDE_MENU
+MENUS 1,N MENU_PRODUIT
+PRODUITS 1,N MENU_PRODUIT
+INGREDIENTS 1,N INGREDIENTS_PRODUITS
+PRODUITS 1,N INGREDIENTS_PRODUITS
+PRODUITS 1,N PRODUITS_CATEGORIES
+CATEGORIES 1,N PRODUITS_CATEGORIES
+
+
+14. MLD DU PROJET
+
+Le MLD transforme le MCD en tables relationnelles.
+
+Exemples :
+
+ROLES(id_role, code_role, libelle)
+
+UTILISATEURS(id_user, id_role, nom, prenom, email, mot_de_passe_hash, num_tel)
+
+COMMANDES(id_cmd, id_user, id_statut, id_canal, numero_ticket, date_cmd, total_ttc)
+
+PRODUITS(id_produit, nom, description, prix_unitaire, disponibilite, quantite)
+
+MENUS(id_menu, nom, prix, disponibilite)
+
+INGREDIENTS(id_ingredient, nom, cout_unitaire, quantite)
+
+COMMANDE_PRODUIT(id_cmd, id_produit, quantite, prix_unitaire, prix_ligne)
+
+COMMANDE_MENU(id_cmd, id_menu, quantite, taille, prix_unitaire, prix_ligne)
+
+MENU_PRODUIT(id_menu, id_produit, quantite)
+
+INGREDIENTS_PRODUITS(id_ingredient, id_produit, quantite)
+
+PRODUITS_CATEGORIES(id_produit, id_cat)
+
+
+15. MPD DU PROJET
+
+Le MPD est l'implémentation physique en MariaDB.
+
+Fichier source :
+wacdo/architecture/MPD.sql
+
+Choix techniques :
+- identifiants en INT UNSIGNED AUTO_INCREMENT ;
+- prix en DECIMAL(10,2) ;
+- disponibilité en TINYINT(1) ;
+- images en MEDIUMBLOB ;
+- clés primaires ;
+- clés étrangères ;
+- index ;
+- contraintes d'unicité.
+
+Exemple :
+La table commandes contient :
+- id_cmd ;
+- id_user ;
+- id_statut ;
+- id_canal ;
+- numero_ticket ;
+- date_cmd ;
+- total_ttc.
+
+
+16. PARCOURS D'UNE COMMANDE
+
+Étapes côté client :
+
+1. Le client ouvre la borne.
+2. Le client choisit sur place ou à emporter.
+3. Le client consulte le catalogue.
+4. Le client ajoute des produits ou menus au panier.
+5. Le client valide la commande.
+
+Étapes côté backend :
+
+1. L'API reçoit le JSON de commande.
+2. Le contrôleur vérifie les données.
+3. Le repository ouvre une transaction.
+4. Le backend vérifie produits et menus.
+5. Le backend vérifie les disponibilités.
+6. Le backend calcule les prix.
+7. Le backend insère la commande.
+8. Le backend insère les lignes.
+9. Le backend calcule les ingrédients nécessaires.
+10. Le backend débite le stock.
+11. Le backend met à jour le total.
+12. Le backend valide la transaction.
+
+Point important :
+Le front ne calcule pas le prix final de confiance.
+Le serveur recalcule le prix final.
+
+
+17. STATUTS DE COMMANDE
+
+Statuts disponibles :
+- en_attente
+- en_preparation
+- prete
+- servie
+- annulee
+
+Transitions autorisées :
+
+en_attente vers en_preparation
+en_attente vers annulee
+en_preparation vers prete
+en_preparation vers annulee
+prete vers servie
+prete vers annulee
+servie vers fin
+annulee vers fin
+
+Justification :
+Une commande ne doit pas changer d'état n'importe comment.
+Le workflow évite les incohérences métier.
+
+
+18. GESTION DU STOCK
+
+Le stock est géré côté backend.
+
+Lorsqu'une commande est créée :
+- le backend calcule les ingrédients nécessaires ;
+- le backend vérifie le stock ;
+- le backend débite les ingrédients.
+
+Lorsqu'une commande est annulée :
+- le backend recrédite les ingrédients.
+
+Avantage :
+Le stock ne dépend pas du front, qui pourrait être modifié par l'utilisateur.
+
+
+19. SECURITE
+
+Le back-office utilise :
+- une authentification par session PHP ;
+- un guard de rôles ;
+- des routes protégées.
+
+Rôles :
+- EMPLOYE ;
+- MANAGER ;
+- ADMIN.
+
+Routes protégées :
+- consultation commandes ;
+- détail commande ;
+- changement statut ;
+- modification produits ;
+- modification menus ;
+- modification ingrédients ;
+- consultation utilisateurs.
+
+La borne peut créer une commande sans compte.
+Mais elle ne peut pas accéder aux fonctions d'administration.
+
+
+20. SONCAS DU PROJET
+
+SONCAS permet de présenter le projet selon plusieurs axes de valeur.
+
+S - Sécurité
+
+Le projet sécurise les routes sensibles.
+Les prix sont recalculés côté serveur.
+Le stock est géré côté serveur.
+Les rôles protègent le back-office.
+
+O - Orgueil
+
+Le projet montre une architecture complète :
+- front ;
+- API ;
+- back-office ;
+- base relationnelle ;
+- Docker ;
+- MVC ;
+- POO.
+
+N - Nouveauté
+
+Le projet propose une borne interactive.
+Le catalogue est dynamique.
+Les images sont stockées en base.
+Un framework front est prévu pour une future version.
+
+C - Confort
+
+Le parcours client est simple.
+Le back-office permet de suivre facilement les commandes.
+Les statuts permettent de suivre l'avancement.
+
+A - Argent
+
+Le backend contrôle les prix.
+Le stock est mis à jour automatiquement.
+Les erreurs de commande et de stock sont limitées.
+Les prix produits et menus peuvent être modifiés.
+
+S - Sympathie
+
+L'interface reprend des codes familiers d'une borne de restauration rapide.
+Le projet est compréhensible par un utilisateur non technique.
+L'expérience est visuelle et directe.
+
+
+21. FORCES DU PROJET
+
+Forces principales :
+
+- Architecture claire.
+- Backend PHP fonctionnel.
+- API REST.
+- Base MariaDB relationnelle.
+- Dockerisation.
+- Authentification.
+- Gestion des rôles.
+- Gestion des commandes.
+- Gestion des statuts.
+- Gestion du stock ingrédients.
+- Back-office utilisable.
+- Front connecté à l'API.
+- Projet évolutif vers un framework front.
+
+
+22. LIMITES ACTUELLES
+
+Limites à assumer :
+
+- Le front visuel n'est pas totalement finalisé.
+- Les options avancées des menus ne sont pas encore stockées.
+- La taille boisson 30 Cl / 50 Cl n'est pas encore gérée en base.
+- Le numéro de chevalet n'est pas encore enregistré.
+- Les tests automatisés ne sont pas complets.
+- La journalisation admin n'est pas encore implémentée.
+- Le framework front est encore en préparation.
+
+Phrase à utiliser :
+Le projet est fonctionnel en MVP, mais certaines fonctionnalités avancées restent à finaliser pour une version production.
+
+
+23. PERSPECTIVES D'EVOLUTION
+
+Court terme :
+- finaliser le modèle backend pour les options avancées ;
+- stocker le chevalet ;
+- gérer les tailles de boisson ;
+- afficher toutes les options dans le back-office ;
+- finaliser le front visuel.
+
+Moyen terme :
+- migrer le front vers un framework ;
+- découper l'interface en composants ;
+- mieux gérer l'état du panier ;
+- renforcer les tests ;
+- améliorer la gestion utilisateurs.
+
+Long terme :
+- dashboard statistique ;
+- historique des actions admin ;
+- gestion multi-restaurant ;
+- interface cuisine ;
+- notifications de commandes.
+
+
+24. PLAN DE PRESENTATION CONSEILLE
+
+Slide 1 : Titre
+WACDO - Borne de commande et back-office
+
+Slide 2 : Problématique
+Comment permettre à un client de passer une commande simplement tout en donnant au restaurant un outil de suivi fiable ?
+
+Slide 3 : Objectifs
+Catalogue, commande, paiement simulé, suivi back-office, stock, sécurité.
+
+Slide 4 : Stack technique
+HTML, CSS, JavaScript, futur framework front, PHP, MariaDB, Docker.
+
+Slide 5 : Architecture générale
+Client vers front, front vers API, back-office vers API, API vers MariaDB.
+
+Slide 6 : Structure du projet
+index.php, index.html, app, assets, config, wacdo/architecture.
+
+Slide 7 : MCD
+Utilisateurs, rôles, commandes, produits, menus, ingrédients, statuts, canaux.
+
+Slide 8 : Parcours commande
+Client, borne, API, base, stock, back-office.
+
+Slide 9 : Sécurité
+Sessions, rôles, routes protégées, prix serveur, stock serveur.
+
+Slide 10 : Back-office
+Login, commandes, détails, statuts, catalogue, ingrédients, utilisateurs.
+
+Slide 11 : SONCAS
+Sécurité, Orgueil, Nouveauté, Confort, Argent, Sympathie.
+
+Slide 12 : État actuel
+Ce qui fonctionne et ce qui reste à finaliser.
+
+Slide 13 : Perspectives
+Options avancées, framework front, dashboard, tests.
+
+Slide 14 : Conclusion
+MVP fonctionnel, architecture complète, projet évolutif.
+
+
+25. NOTES ORALES COURTES
+
+Introduction :
+WACDO est une application de commande avec une borne client, une API PHP et un back-office.
+
+Architecture :
+J'ai séparé le front statique du backend pour avoir une borne légère qui consomme une API.
+
+Backend :
+Le backend est en PHP vanilla avec une architecture MVC simple.
+
+Base de données :
+MariaDB est adaptée car les données sont relationnelles : commandes, produits, menus, ingrédients, utilisateurs.
+
+Sécurité :
+Les routes sensibles sont protégées par session et rôles.
+
+Stock :
+Le stock est géré côté serveur. À la commande, les ingrédients sont débités ; à l'annulation, ils sont recrédités.
+
+Limites :
+Le projet fonctionne en MVP, mais il reste des fonctionnalités avancées à finaliser.
+
+Conclusion :
+Le projet montre une architecture complète, fonctionnelle et évolutive.
+
+
+26. PROMPT POUR GOOGLE NOTEBOOK LM OU UNE IA DE PRESENTATION
+
+À partir de ce document, crée une présentation PowerPoint professionnelle en français pour un examen de projet informatique.
+
+Contraintes :
+- 12 à 14 slides.
+- Style clair, moderne et pédagogique.
+- Inclure un schéma d'architecture.
+- Inclure un MCD simplifié.
+- Inclure une slide SONCAS.
+- Inclure une slide forces / limites.
+- Inclure une slide perspectives.
+- Mentionner que le front actuel est en HTML/CSS/JavaScript vanilla.
+- Mentionner qu'un framework front est en préparation pour une future version.
+- Ne pas présenter le projet comme totalement terminé.
+- Insister sur le fait que le backend est source de vérité pour les prix, le stock et la sécurité.
+- Ajouter des notes orales courtes pour chaque slide.
+
+Sortie attendue :
+- plan slide par slide ;
+- contenu exact de chaque slide ;
+- notes orales ;
+- suggestions de design ;
+- propositions de schémas.
+

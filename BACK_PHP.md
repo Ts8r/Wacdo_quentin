@@ -54,6 +54,16 @@ La base existe et a ete seedee. Les quantites ingredients ont ete remises en `IN
 
 ## Decisions metier prises
 
+### Contrat front/back
+
+Le contrat cible des chemins et payloads est prepare dans :
+
+```txt
+docs/contrat_front_back_wacdo.md
+```
+
+Decision actuelle : les chemins sont prepares, mais les options avancees ne sont pas encore branchees dans l API.
+
 ### Menus
 
 La taille du menu modifie le prix, pas encore la composition.
@@ -175,19 +185,20 @@ Route publique conservee volontairement :
 
 ## Compte admin cree
 
-Compte admin de travail cree et verifie :
+Compte admin de travail cree et verifie.
+Les identifiants reels ne doivent pas etre exposes dans une documentation partagee.
 
 ```txt
-Email: quentin.admin@wacdo.local
-Mot de passe: Admin1234!
+Email: voir .env ou note privee de reprise
+Mot de passe: voir note privee de reprise
 Role: ADMIN
 ```
 
 Compte client de test cree :
 
 ```txt
-Email: auth.test.20260423@example.com
-Mot de passe: Password123
+Email: voir note privee de reprise
+Mot de passe: voir note privee de reprise
 Role: CLIENT
 ```
 
@@ -245,8 +256,8 @@ PATCH /api/ingredients/{id}
 curl -X POST "https://quentin-wacdo.stark.a3n.fr/api/auth/login" \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "quentin.admin@wacdo.local",
-    "mot_de_passe": "Admin1234!"
+    "email": "admin@example.test",
+    "mot_de_passe": "mot-de-passe-admin"
   }'
 ```
 
@@ -331,7 +342,7 @@ curl -X GET "https://quentin-wacdo.stark.a3n.fr/api/utilisateurs?role=CLIENT&sea
 ### Interface back office
 
 ```txt
-GET /back-office
+GET /
 ```
 
 ## Tests deja verifies
@@ -381,7 +392,7 @@ GET /back-office
 
 ### Front back office vanilla
 
-- `GET /back-office` -> `200`
+- `GET /` -> `200`
 - CSS back office servi -> `200`
 - JS back office servi -> `200`
 - ecran disponible avec login, commandes, catalogue, ingredients, utilisateurs
@@ -407,19 +418,26 @@ ingredients_produits.quantite = int(10) unsigned
 
 ## Ce qu il reste a faire ensuite
 
-Prochaine suite logique pour le back office :
+Le back est operationnel pour le MVP, mais il n est pas considere comme termine.
+
+Prochaine suite logique pour le back office et l examen blanc :
 
 1. Consolider le front back office
    - verifier visuellement desktop/mobile
    - ajouter detail commande si besoin
    - ameliorer les filtres canal/statut selon les donnees reelles
 
-2. Eventuellement ensuite :
+2. Consolider le backend
+   - ajouter des tests automatises ou un script de smoke test rejouable
+   - verifier les cas limites de commande, stock, annulation et roles
+   - uniformiser les erreurs et les messages de validation si besoin
+
+3. Eventuellement ensuite :
    - modification mot de passe
    - gestion roles admin / employe / manager
    - journalisation ou historique des changements
 
-3. Ensuite :
+4. Ensuite :
    - front client vanilla
 
 ## Note de reprise
@@ -435,7 +453,7 @@ Le chantier backend PHP est deja bien avance. Le socle a conserver absolument :
 
 La brique admin de modification produits / menus est en place.
 La brique admin de liste utilisateurs est en place.
-Un premier front back office vanilla existe sur `/back-office`.
+Un premier front back office vanilla existe sur `/`.
 La migration images binaires en base est en place.
 
-La prochaine vraie brique coherente est la consolidation visuelle et fonctionnelle du back office.
+La prochaine vraie brique coherente est la consolidation visuelle et fonctionnelle du back office, avec une passe backend sur les cas limites avant l examen blanc.

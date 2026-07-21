@@ -252,6 +252,44 @@ tr:last-child td {
     border-bottom: 0;
 }
 
+.order-detail-row td {
+    background: #fbfcfe;
+}
+
+.order-detail {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.order-detail h3 {
+    margin: 0 0 8px;
+    font-size: 14px;
+}
+
+.order-detail ul {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.order-detail li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #fff;
+}
+
+.empty-detail {
+    margin: 0;
+    color: var(--muted);
+}
+
 .status-pill {
     display: inline-flex;
     align-items: center;
@@ -393,5 +431,9 @@ tr:last-child td {
 
     .edit-grid {
         grid-template-columns: 1fr 1fr;
+    }
+
+    .order-detail {
+        grid-template-columns: 1fr;
     }
 }
