@@ -1,8 +1,3 @@
-# Docker Compose — Wacdo Project (quentin)
-# Services : MariaDB + PHP (Apache + PDO MySQL)
-# Network  : wacdo_bak_quentin (bridge interne) + admin_proxy (Traefik externe)
-# Domains  : quentin-wacdo.stark.a3n.fr + front-quentin-wacdo.stark.a3n.fr
-
 services:
 
   wacdo_mariadb:

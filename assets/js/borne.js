@@ -107,14 +107,23 @@ function ajusterEchelleBorne() {
         return;
     }
 
-    const margeSecurite = 0.88;
-    const decalageVertical = -24;
-    const scale = Math.min(window.innerWidth / 1440, window.innerHeight / 1024) * margeSecurite;
-    application.style.transform = `translate(-50%, calc(-50% + ${decalageVertical}px)) scale(${scale})`;
+    const viewport = window.visualViewport;
+    const largeurVisible = viewport?.width || window.innerWidth;
+    const hauteurVisible = viewport?.height || window.innerHeight;
+    const gaucheVisible = viewport?.offsetLeft || 0;
+    const hautVisible = viewport?.offsetTop || 0;
+    const margeSecurite = 0.94;
+    const scale = Math.min(largeurVisible / 1440, hauteurVisible / 1024) * margeSecurite;
+
+    application.style.left = `${gaucheVisible + largeurVisible / 2}px`;
+    application.style.top = `${hautVisible + hauteurVisible / 2}px`;
+    application.style.transform = `translate(-50%, -50%) scale(${scale})`;
 }
 
 init();
 window.addEventListener("resize", ajusterEchelleBorne);
+window.visualViewport?.addEventListener("resize", ajusterEchelleBorne);
+window.visualViewport?.addEventListener("scroll", ajusterEchelleBorne);
 
 async function init() {
     ajusterEchelleBorne();

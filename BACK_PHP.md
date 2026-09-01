@@ -62,7 +62,7 @@ Le contrat cible des chemins et payloads est prepare dans :
 docs/contrat_front_back_wacdo.md
 ```
 
-Decision actuelle : les chemins sont prepares, mais les options avancees ne sont pas encore branchees dans l API.
+Decision actuelle : pour le MVP examen, l API conserve son contrat actuel. Les options avancees, le mode service et le chevalet restent des perspectives non branchees.
 
 ### Menus
 

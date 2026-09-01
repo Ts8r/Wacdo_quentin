@@ -67,11 +67,8 @@ Fonctionnalités déjà présentes :
 Fonctionnalités encore à finaliser :
 
 - Finalisation visuelle complète du front.
-- Gestion avancée des options de menu.
-- Stockage du numéro de chevalet.
-- Gestion des tailles de boisson 30 Cl / 50 Cl.
-- Gestion du supplément boisson côté backend.
-- Affichage complet des options dans le back-office.
+- Contrat API conservé dans sa version actuelle pour le MVP examen.
+- Gestion avancée des options de menu, chevalet, tailles de boisson et supplément boisson reportés en post-examen.
 - Tests automatisés plus complets.
 - Journalisation des actions administrateur.
 - Migration future vers un framework front.
@@ -337,7 +334,7 @@ Fichiers principaux :
 Le fichier index.html contient la structure de la borne :
 - écran d'accueil ;
 - choix sur place / à emporter ;
-- écran chevalet ;
+- choix visuel sur place / à emporter ;
 - écran commande ;
 - panier ;
 - modales ;
@@ -371,7 +368,7 @@ Fonctions importantes :
 - fermerModales
 
 Le front actuel a été rendu compatible avec le backend.
-Il n'envoie pas encore les options avancées qui ne sont pas stockées côté backend.
+Il n'envoie pas les options avancées, car elles ne font pas partie du contrat API retenu pour le MVP examen.
 
 
 11. BACK-OFFICE
@@ -703,27 +700,28 @@ Forces principales :
 Limites à assumer :
 
 - Le front visuel n'est pas totalement finalisé.
-- Les options avancées des menus ne sont pas encore stockées.
-- La taille boisson 30 Cl / 50 Cl n'est pas encore gérée en base.
-- Le numéro de chevalet n'est pas encore enregistré.
+- L'API reste volontairement simple pour le MVP examen.
+- Les options avancées, les tailles de boisson, les sauces et le chevalet sont des perspectives post-examen.
 - Les tests automatisés ne sont pas complets.
 - La journalisation admin n'est pas encore implémentée.
 - Le framework front est encore en préparation.
 
 Phrase à utiliser :
-Le projet est fonctionnel en MVP, mais certaines fonctionnalités avancées restent à finaliser pour une version production.
+Le projet est fonctionnel en MVP. Pour l'examen, je garde le contrat API actuel et je présente les options avancées comme des évolutions futures.
 
 
 23. PERSPECTIVES D'EVOLUTION
 
 Court terme :
-- finaliser le modèle backend pour les options avancées ;
-- stocker le chevalet ;
-- gérer les tailles de boisson ;
-- afficher toutes les options dans le back-office ;
-- finaliser le front visuel.
+- finaliser le front visuel ;
+- stabiliser le parcours de démonstration ;
+- vérifier catalogue, panier, commande et back-office ;
+- renforcer les tests smoke et les contrôles manuels.
 
 Moyen terme :
+- étudier les options avancées de menu ;
+- étudier les tailles de boisson et les sauces ;
+- ajouter le chevalet uniquement si une consigne le demande ;
 - migrer le front vers un framework ;
 - découper l'interface en composants ;
 - mieux gérer l'état du panier ;
@@ -834,4 +832,3 @@ Sortie attendue :
 - notes orales ;
 - suggestions de design ;
 - propositions de schémas.
-

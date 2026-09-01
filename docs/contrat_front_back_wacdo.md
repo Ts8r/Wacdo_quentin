@@ -1,15 +1,16 @@
-# WACDO - Contrat front/back prepare
+# WACDO - Contrat front/back MVP examen
 
-Ce document prepare les chemins et le contrat cible entre la borne, le backend et le back-office.
+Ce document fixe le contrat conserve pour le MVP examen entre la borne, le backend et le back-office.
 
-Objectif actuel : preparer la structure sans brancher toute la logique API avancee.
+Decision actuelle : l'API existante est conservee. On ne branche pas de nouveau contrat API pour l'examen.
 
 ## 1. Regle de travail
 
 - Le front ne doit pas inventer le total final.
 - Le backend reste la source de verite pour les prix, les stocks et la validation.
-- Les chemins sont prepares avant de brancher les options avancees.
-- Les options non encore stockees ne doivent pas etre presentees comme definitivement fonctionnelles.
+- Le front garde les chemins API actuels.
+- Les options non stockees ne doivent pas etre presentees comme fonctionnelles.
+- Le choix visuel "sur place / a emporter" peut exister dans le front, mais il n'est pas persiste dans le payload actuel.
 
 ## 2. Chemins API existants a conserver
 
@@ -79,9 +80,9 @@ Limite actuelle :
 - pas de taille boisson `30CL / 50CL` stockee ;
 - pas de supplement boisson cote backend.
 
-## 4. Contrat commande cible a preparer
+## 4. Contrat post-examen uniquement
 
-Payload cible pour une version complete :
+Le payload suivant decrit une piste future. Il ne fait pas partie du MVP examen et ne doit pas etre branche maintenant.
 
 ```json
 {
@@ -114,15 +115,14 @@ Payload cible pour une version complete :
 
 Important :
 
-- `mode_service` doit etre valide cote backend.
-- `taille_boisson` doit etre validee cote backend.
-- le supplement boisson doit etre calcule cote backend.
-- les IDs d'options doivent correspondre a des produits existants et disponibles.
-- `numero_chevalet` n'est pas dans le contrat prioritaire. Il reste une option future si le parcours restaurant demande un service a table par chevalet.
+- `mode_service`, `taille_boisson`, les sauces et les choix de composition menu sont des perspectives post-examen.
+- Le supplement boisson devrait etre calcule cote backend si cette evolution est ajoutee.
+- Les IDs d'options devraient correspondre a des produits existants et disponibles.
+- `numero_chevalet` n'est pas dans le MVP. Il reste une option future uniquement si une consigne demande un service a table par chevalet.
 
-## 5. Reponse commande cible
+## 5. Reponse commande post-examen
 
-Reponse cible pour le front et le back-office :
+Reponse cible possible pour une version plus complete, non branchee dans le MVP examen :
 
 ```json
 {
@@ -173,11 +173,11 @@ Reponse cible pour le front et le back-office :
 }
 ```
 
-## 6. Evolution base de donnees a prevoir
+## 6. Evolution base de donnees post-examen
 
 ### Table `commandes`
 
-Champs a ajouter plus tard :
+Champ possible a ajouter plus tard si le mode de service doit etre persiste :
 
 ```txt
 mode_service VARCHAR(20) NOT NULL DEFAULT 'a_emporter'
@@ -298,23 +298,22 @@ app/Views/back_office.php
 assets/css/back-office.css
 ```
 
-## 9. Ordre d'integration recommande
+## 9. Ordre de travail recommande pour le MVP
 
-1. Ajouter le champ `mode_service`.
-2. Adapter le backend pour accepter et renvoyer ce champ.
-3. Adapter le front pour envoyer ce champ.
-4. Ajouter la structure d'options de lignes.
-5. Adapter le backend pour stocker les options.
-6. Adapter le back-office pour afficher les options.
-7. Rebrancher le parcours front complet.
-8. Ajouter les tests.
+1. Conserver le contrat API actuel.
+2. Finaliser le visuel front de la borne.
+3. Stabiliser le parcours de demonstration : catalogue, panier, creation commande, back-office.
+4. Verifier les chemins front/back existants.
+5. Ajouter des tests smoke et controles manuels suffisants pour l'examen.
+6. Documenter les evolutions post-examen sans les presenter comme deja branchees.
 
 ## 10. Decision actuelle
 
-Pour l'instant, on prepare les chemins et le contrat.
+Pour l'examen, on garde l'API actuelle.
 
 On ne branche pas encore :
 
+- `mode_service` ;
 - la persistance du chevalet ;
 - la persistance des sauces ;
 - la persistance de la boisson incluse ;
