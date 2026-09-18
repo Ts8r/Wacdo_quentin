@@ -63,6 +63,10 @@ final class UtilisateurController
 
     public function create(): void
     {
+        if (!$this->canCreateUser()) {
+            return;
+        }
+
         try {
             $data = JsonRequest::body();
 
@@ -184,5 +188,18 @@ final class UtilisateurController
         }
 
         return $this->authGuard->requireRoles(self::BACK_OFFICE_ROLES) !== null;
+    }
+
+    private function canCreateUser(): bool
+    {
+        if ($this->authGuard === null) {
+            JsonResponse::send([
+                'error' => 'server_error',
+                'message' => 'Auth guard is not configured.',
+            ], 500);
+            return false;
+        }
+
+        return $this->authGuard->requireRoles(['ADMIN']) !== null;
     }
 }
