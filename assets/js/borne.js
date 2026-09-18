@@ -61,7 +61,8 @@ const CHEMINS_API = {
     catalogue: `${API_BASE}/catalogue`,
     commandes: `${API_BASE}/commandes`
 };
-const SOURCE_DONNEES = "api";
+const API_ACTIVE = false;
+const SOURCE_DONNEES = API_ACTIVE ? "api" : "static";
 const URL_DONNEES = {
     static: "/wacdo/produits.json",
     api: CHEMINS_API.catalogue
@@ -550,6 +551,14 @@ async function envoyerCommande() {
             .filter((ligne) => ligne.type === "menus")
             .map((ligne) => ({ id: ligne.id, quantite: ligne.quantite, taille: ligne.taille || "M" }))
     };
+
+    if (!API_ACTIVE) {
+        return {
+            numero_ticket: `TEST-${Date.now().toString().slice(-6)}`,
+            total_ttc: totalPanier(),
+            payload
+        };
+    }
 
     const reponse = await fetch(CHEMINS_API.commandes, {
         method: "POST",

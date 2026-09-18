@@ -22,8 +22,11 @@ Le container front ne monte que `index.html`, les assets CSS/JS de la borne et
 les JSON/images sous `wacdo/`. Il ne monte ni le code PHP, ni `app/`, ni
 `config/`, ni `.env`.
 
-La borne appelle l'API en HTTPS sur `BACK_URL` avec cookies inclus. Les reponses
-`/api/*` autorisent l'origine exacte de `FRONT_URL` avec credentials.
+La borne utilise actuellement les donnees locales de `wacdo/` et simule la
+confirmation d'une commande. Les chemins API sont prepares dans le JavaScript,
+mais l'appel catalogue et l'envoi de commande restent desactives pour cette
+version. Les reponses `/api/*` sont toutefois prevues pour autoriser l'origine
+exacte de `FRONT_URL` avec credentials lors du branchement ulterieur.
 
 ## Demarrage
 

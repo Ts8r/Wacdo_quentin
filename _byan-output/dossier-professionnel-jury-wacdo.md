@@ -81,7 +81,7 @@ La conception a suivi une progression par etapes :
 3. modeliser les donnees ;
 4. concevoir l'architecture ;
 5. developper l'API et les acces a la base ;
-6. connecter le front et le back-office ;
+6. preparer les chemins d'echange entre le front et le back-office ;
 7. deployer dans des conteneurs ;
 8. verifier les parcours critiques ;
 9. relever les limites et preparer les evolutions.
@@ -90,17 +90,15 @@ Cette methode permet de justifier les decisions avant de coder et de conserver d
 
 ### 3.4 Etat actuel de realisation (18/09/2026)
 
-Le projet est aujourd'hui dans une phase de finalisation technique et de mise au point de la structure de deployment, avec un cadrage clair et une base fonctionnelle solide.
-
-Le point important est que la structure a ete repliee en s'inspirant du projet de Corentin, sans copier son code ni remplacer le modele metier propre a Quentin. La logique suivie a ete la suivante :
+Le projet est aujourd'hui dans une phase de finalisation technique, avec un cadrage clair et une base fonctionnelle solide. La logique suivie a ete la suivante :
 
 - retenir la logique d'organisation du projet et la separation des services ;
-- conserver le modele metier, les MPD/MCD et les donnees propres au projet Quentin ;
+- conserver le modele metier, les MPD/MCD et les donnees propres au projet ;
 - separer la base, les migrations, le seed, l'application PHP et le front statique ;
 - conserver la logique d'integration Traefik et du reseau hote, sans modifier l'infrastructure existante du serveur ;
 - maintenir un niveau de production raisonnable en mode override local, sans casser le fonctionnement de la stack.
 
-A l'heure actuelle, la base de travail est stable et la structure est coherent. Le projet contient une architecture de deployment reproductible et une separation claire des roles entre la base, l'API, le front et le contexte serveur. Le niveau de validation disponible est donc celui d'un projet quasiment finalisable techniquement, avec quelques points de finition a consolider selon le mode de restitution choisi (dossier jury, demo ou mise en ligne).
+A l'heure actuelle, la base de travail est stable et la structure est coherente. Le projet contient une architecture de deploiement reproductible et une separation claire des roles entre la base, l'API, le front et le contexte serveur. La version presentee utilise les donnees locales de la borne ; les chemins API sont prets mais restent volontairement desactives.
 
 Le point de vigilance a bien distinguer est le suivant : la validation du service PHP ne s'effectue pas par un simple appel `localhost` brut, mais par le contexte Docker/Traefik et les domaines ou points d'entree du projet. La stack est coherent, mais les chemins d'acces externes doivent rester alignes sur l'infrastructure hote et non sur un simple port local non expose.
 
@@ -211,7 +209,7 @@ La borne est pensee pour une resolution principale de borne tout en conservant u
 ```mermaid
 flowchart LR
     Client[Client] --> Front[Borne HTML CSS JS]
-    Front -->|HTTPS JSON| API[API PHP]
+    Front -.->|Chemins HTTPS JSON prets| API[API PHP]
     Employe[Employe ou administrateur] --> Back[Back-office]
     Back --> API
     API --> Repositories[Repositories]
@@ -482,7 +480,7 @@ Cette partie doit etre documentee avec les entites, les migrations, les controle
 
 Le script `bin/smoke_backend.sh` verifie notamment :
 
-- la sante de l'API ;
+- la presence des chemins API prevus ;
 - le chargement du catalogue ;
 - l'affichage du back-office ;
 - le refus d'une route protegee sans session ;
@@ -588,7 +586,7 @@ Les tests automatises ne couvrent pas encore tous les parcours et toutes les err
 
 ## 16. Conclusion
 
-WACDO est une application complete autour d'un parcours de commande : une borne client, un front vanilla, une API PHP, un back-office, une base MariaDB et une infrastructure Dockerisee.
+WACDO est une application complete autour d'un parcours de commande : une borne client, un front vanilla, une API PHP preparee, un back-office, une base MariaDB et une infrastructure Dockerisee. Dans la version presentee, la borne fonctionne avec ses donnees locales ; le branchement API est une evolution prevue.
 
 Les choix techniques repondent a des besoins identifies :
 
@@ -608,7 +606,7 @@ Le projet est presentable comme une construction progressive et argumentee. Il n
 
 WACDO est un projet de commande rapide realise dans un contexte de restaurant a service rapide, avec une borne client, une API PHP, un back-office et une base relationnelle MariaDB. Le projet montre une architecture cohérente entre l'experience client, la logique serveur et la gestion interne des commandes. La force du projet repose sur la clarté des responsabilités : la borne collecte les choix du client, l'API valide les regles metier et la base conserve les donnees de reference. Le back-office permet au personnel de suivre et de traiter les commandes sans exposer la logique critique au navigateur.
 
-Le projet a ete construit de maniere progressive. La version vanilla a permis de valider le parcours principal rapidement, avant de formaliser les choix de structure et les regles metier. Ensuite, la documentation, la modelisation, l'infrastructure Docker et la separation des services ont permis d'aboutir a une solution plus solide et plus presentable. Le choix de se baser sur le modele propre a Quentin, avec une structure inspiree de Corentin, montre une bonne comprehension de la distinction entre l'architecture de reference et le besoin metier reel du projet.
+Le projet a ete construit de maniere progressive. La version vanilla a permis de valider le parcours principal rapidement, avant de formaliser les choix de structure et les regles metier. Ensuite, la documentation, la modelisation, l'infrastructure Docker et la separation des services ont permis d'aboutir a une solution solide et presentable. Cette progression relie le besoin metier, la modelisation, le code et le deploiement.
 
 Le projet est donc a la fois une preuve de competence technique et une preuve de methodologie : analyse du besoin, modelisation, conception, development, integration, deployment et validation. Il est coherent, explicable et presentable devant un jury, en mettant l'accent sur les decisions de conception et sur la justesse des choix.
 
