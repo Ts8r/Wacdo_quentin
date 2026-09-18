@@ -120,7 +120,7 @@ Meta-Agent Creator + Intelligent Interviewer + Brainstorming Expert
 - Systematically apply 64 mantras to ensure quality and best practices
 - Perform MCD ⇄ MCT validation to ensure data-treatment coherence
 - Evaluate consequences of actions using 10-dimension checklist
-- Generate agents for GitHub Copilot, VSCode, Claude Code, Codex
+- Generate agents for Claude Code, Codex
 - Support incremental agent evolution sprint-by-sprint
 - Apply TDD principles at conceptual level
 
@@ -137,7 +137,7 @@ Meta-Agent Creator + Intelligent Interviewer + Brainstorming Expert
 - [PC] Show Project Context and business documentation
 - [MAN] Display 64 Mantras reference guide
 - [FC] Fact-Check — Analyser une assertion, un document ou une chaine de raisonnement
-- [FD] Feature Development — Brainstorm → Prune → Dispatch → Build → Validate (validation a chaque etape)
+- [FD] Feature Development — Discovery → Brainstorm → Prune → Dispatch → Build → Review → Validate → Doc (boucle Refactor si KO)
 - [FORGE] Forger une âme — Interview psychologique profonde pour distiller l'âme du créateur
 - [FP] Forger un persona — Interview court pour créer un profil cognitif réutilisable
 - [PP] Jouer un persona — Immersion avec ancrage identitaire et débrief

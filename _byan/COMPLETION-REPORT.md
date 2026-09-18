@@ -17,7 +17,7 @@ Suite à la migration `_byan` → `_byan`, la structure BYAN v2 a été complét
 ### 1. Workflows
 
 #### interview-workflow.md (579 lignes)
-**Localisation:** `_byan/workflows/interview-workflow.md`
+**Localisation:** `_byan/workflow/simple/interview-workflow.md`
 
 **Contenu:**
 - Vue d'ensemble workflow d'interview
@@ -39,7 +39,7 @@ Suite à la migration `_byan` → `_byan`, la structure BYAN v2 a été complét
 - Architecture worker-based détaillée
 
 #### validate-agent-workflow.md (320 lignes)
-**Localisation:** `_byan/workflows/validate-agent-workflow.md`
+**Localisation:** `_byan/workflow/simple/validate-agent-workflow.md`
 
 **Contenu:**
 - Workflow de validation automatique
@@ -57,7 +57,7 @@ Suite à la migration `_byan` → `_byan`, la structure BYAN v2 a été complét
 - Génération de rapports JSON
 
 #### edit-agent-workflow.md (445 lignes)
-**Localisation:** `_byan/workflows/edit-agent-workflow.md`
+**Localisation:** `_byan/workflow/simple/edit-agent-workflow.md`
 
 **Contenu:**
 - 3 modes d'édition (Interactive, Direct, Merge)
@@ -77,7 +77,7 @@ Suite à la migration `_byan` → `_byan`, la structure BYAN v2 a été complét
 ### 2. Documentation Workers
 
 #### workers.md (1283 lignes)
-**Localisation:** `_byan/workers.md`
+**Localisation:** `_byan/worker/workers.md`
 
 **Contenu:**
 - Documentation complète des 6 workers BYAN v2
@@ -99,7 +99,6 @@ Suite à la migration `_byan` → `_byan`, la structure BYAN v2 a été complét
    - ComplexityScorer: Analyse complexité tâches (0.0-1.0)
    - TaskRouter: Routage intelligent (local vs délégation)
    - LocalExecutor: Exécution locale
-   - TaskToolInterface: Interface avec sous-agents Copilot CLI
 
 3. **Generation Worker** (`generation/`)
    - ProfileTemplate: Templates markdown avec placeholders
@@ -316,7 +315,7 @@ User → Context → Orchestrator → Dispatcher → Generation → Output
 
 ### Checklist Complétion
 
-- [x] Workflows présents dans `_byan/workflows/`
+- [x] Workflows présents dans `_byan/workflow/simple/`
 - [x] Interview workflow documenté avec 12 questions
 - [x] Workers documentés dans `workers.md`
 - [x] Mapping code source ↔ documentation
@@ -364,11 +363,11 @@ Maintenant que l'architecture `_byan/` est complète et documentée, on peut pas
 
 ```bash
 # Workflows
-git add _byan/workflows/
+git add _byan/workflow/simple/
 git commit -m "feat(byan): add complete workflow documentation (interview, validate, edit)"
 
 # Workers documentation
-git add _byan/workers.md
+git add _byan/worker/workers.md
 git commit -m "docs(byan): add comprehensive workers architecture documentation"
 
 # Update migration report
@@ -381,10 +380,10 @@ git commit -m "docs: update migration report with completion status"
 ## Références
 
 ### Documentation Créée
-- `_byan/workflows/interview-workflow.md` - 579 lignes
-- `_byan/workflows/validate-agent-workflow.md` - 320 lignes
-- `_byan/workflows/edit-agent-workflow.md` - 445 lignes
-- `_byan/workers.md` - 1283 lignes
+- `_byan/workflow/simple/interview-workflow.md` - 579 lignes
+- `_byan/workflow/simple/validate-agent-workflow.md` - 320 lignes
+- `_byan/workflow/simple/edit-agent-workflow.md` - 445 lignes
+- `_byan/worker/workers.md` - 1283 lignes
 
 ### Code Source
 - `src/byan-v2/` - Implementation complète

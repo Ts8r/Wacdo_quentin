@@ -1,0 +1,211 @@
+#!/usr/bin/env bash
+# BYAN pre-commit hook. Five gates run in order:
+#   1. Strict Mode gate  : block if a strict session is engaged but not completed.
+#   2. Native-workflow lint : block if a .claude/workflows/*.js couples to state.
+#   3. Template fidelity : block if install/templates/ drifted from root.
+#   4. Stub path drift   : block if a tracked stub carries a stale _bmad/@bmad path ref.
+#   5. Mantra floor      : block if a Gen3 persona source scores below the floor.
+#
+# Install :
+#   git config core.hooksPath .githooks
+#
+# Bypass (emergency only) :
+#   git commit --no-verify
+#
+# Mantra gate scope : the canonical Gen3 persona SOURCES
+#   _byan/agent/<name>/<name>.md
+# are validated with DOMAIN-AWARE scoring (each persona is scored only against
+# the mantras applicable to its declared scope, via scope-resolver). Deployed
+# artifacts (.github/agents, .claude/skills, .claude/agents) are derived loader
+# stubs or non-persona procedures; the non-blocking Stop hook (mantra-validate.js)
+# warns on those. THRESHOLD is an anti-stub FLOOR, not a quality bar: it catches
+# near-empty / zombie persona files. Genuine personas score well above it; deep
+# quality is the job of the semantic embodiment audit (src/byan-v2/generation/mantra-audit.js),
+# which runs out-of-band, not at commit time.
+
+set -euo pipefail
+
+THRESHOLD=30
+VALIDATOR="src/byan-v2/generation/mantra-validator.js"
+RESOLVER="src/byan-v2/generation/scope-resolver.js"
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "[byan pre-commit] node not found, skipping mantra check"
+  exit 0
+fi
+
+# BYAN Strict Mode gate — the platform-agnostic final net. If a strict session
+# was engaged (scope locked) but not completed correctly, block the commit.
+# No-op when strict mode was never engaged. Runs on every platform (Claude
+# Code, Codex, Copilot) since it triggers at commit time, not in-session.
+STRICT_GATE="_byan/mcp/byan-mcp-server/bin/strict-precommit-gate.js"
+if [ -f "$STRICT_GATE" ]; then
+  if ! node "$STRICT_GATE" --root "$(git rev-parse --show-toplevel)"; then
+    echo ""
+    echo "Commit blocked by BYAN Strict Mode gate."
+    echo "Complete the strict session (byan_strict_complete) or abort it (byan_strict_abort)."
+    echo "Bypass with 'git commit --no-verify' (emergency only)."
+    exit 1
+  fi
+fi
+
+# Native workflow lint — a .claude/workflows/*.js script runs outside the
+# conversation turn where the strict/FD hooks fire, so the surviving net is this
+# gate : a native script must not couple directly to BYAN state internals
+# (import/require lib/fd-state.js or the strict-mode lib). State goes through the
+# byan_fd_* / byan_strict_* MCP tools. No-op if the linter is absent.
+WF_LINT="_byan/mcp/byan-mcp-server/bin/byan-lint-workflows.js"
+if [ -f "$WF_LINT" ]; then
+  if ! node "$WF_LINT" --root "$(git rev-parse --show-toplevel)"; then
+    echo ""
+    echo "Commit blocked : native workflow script couples to BYAN state internals."
+    echo "Use the byan_fd_* / byan_strict_* MCP tools instead of importing lib/fd-state.js."
+    echo "Bypass with 'git commit --no-verify' (emergency only)."
+    exit 1
+  fi
+fi
+
+# Template fidelity gate — only install/templates/ ships on npm (package.json
+# files[]), but the dev code lives at root _byan/ and .claude/. Without a sync the
+# template drifts, and a published version can promise features its package does
+# not contain. This gate blocks a commit whose template has drifted from root on
+# any mirrored path; runtime seeds under _byan/memoire/ are excluded. Re-sync with
+# the apply command, then restage. No-op if the tool is absent.
+TEMPLATE_SYNC="_byan/mcp/byan-mcp-server/bin/byan-sync-template.js"
+if [ -f "$TEMPLATE_SYNC" ]; then
+  if ! node "$TEMPLATE_SYNC" --check --root "$(git rev-parse --show-toplevel)"; then
+    echo ""
+    echo "Commit blocked : install/templates/ has drifted from root."
+    echo "Re-sync with 'node $TEMPLATE_SYNC' then restage the template, or bypass"
+    echo "with 'git commit --no-verify' (emergency only)."
+    exit 1
+  fi
+fi
+
+# Soul source drift gate — BYAN's active soul (_byan/agent/byan/{soul,tao}.md) is
+# mirrored into the shippable prefixed copies (byan-{soul,tao}.md) that the
+# installer copies to soul.md/tao.md at setup. This gate blocks a commit whose
+# shippable soul has drifted from the active one, so a fresh install ships a
+# current identity. soul-memory is out of scope (curated seed). Dev-repo tooling:
+# the bin is not shipped, so this gate no-ops in installed projects (the [ -f ]
+# guard below). Re-sync with the apply command, then restage.
+SOUL_SYNC="_byan/mcp/byan-mcp-server/bin/byan-sync-soul.js"
+if [ -f "$SOUL_SYNC" ]; then
+  if ! node "$SOUL_SYNC" --check --root "$(git rev-parse --show-toplevel)"; then
+    echo ""
+    echo "Commit blocked : the shippable soul has drifted from the active soul."
+    echo "Re-sync with 'node $SOUL_SYNC' then restage, or bypass with"
+    echo "'git commit --no-verify' (emergency only)."
+    exit 1
+  fi
+fi
+
+# Stub path drift gate — the installer generated platform stubs (.codex/prompts,
+# .github/agents, .claude/skills) over many versions; older generators emitted the
+# legacy _bmad/@bmad path layout while the agent sources are clean. This gate
+# blocks a commit whose tracked stubs still carry a stale _bmad/ or @bmad/ PATH
+# ref (the @bmad- invocation syntax and the _bmad-output/ artifact dir are left
+# alone). Re-normalize with the apply command, then restage. No-op if the tool is
+# absent or no stub dirs exist (installed-user no-op).
+STUB_SYNC="_byan/mcp/byan-mcp-server/bin/byan-sync-stubs.js"
+if [ -f "$STUB_SYNC" ]; then
+  if ! node "$STUB_SYNC" --check --root "$(git rev-parse --show-toplevel)"; then
+    echo ""
+    echo "Commit blocked : a tracked stub carries a stale _bmad/@bmad path ref."
+    echo "Re-normalize with 'node $STUB_SYNC' then restage, or bypass with"
+    echo "'git commit --no-verify' (emergency only)."
+    exit 1
+  fi
+fi
+
+# Remote-safe connector surface gate — the remote MCP Org Connector
+# (server-http.js) exposes only REMOTE_SAFE_TOOLS. This gate blocks a commit if
+# that allowlist ever contains an fs-local / stateful / write tool, which on a
+# shared multi-tenant connector host would read or mutate the wrong disk or
+# cross-tenant state. No-op if the linter is absent.
+REMOTE_LINT="_byan/mcp/byan-mcp-server/bin/byan-lint-remote-safe.js"
+if [ -f "$REMOTE_LINT" ]; then
+  if ! node "$REMOTE_LINT"; then
+    echo ""
+    echo "Commit blocked : the remote-safe MCP tool allowlist contains an unsafe tool."
+    echo "Remove it from REMOTE_SAFE_TOOLS in server.js, or bypass with"
+    echo "'git commit --no-verify' (emergency only)."
+    exit 1
+  fi
+fi
+
+# Skill-bundle drift gate — the org-publishable skill bundles derive from the
+# live .claude/skills/ SKILL.md files; skill-bundles-manifest.json is the
+# committed drift ledger. This gate blocks a commit where a SKILL.md changed
+# without rebuilding the bundles (stale org publish). Re-run the bundler then
+# restage the manifest. No-op if the tool is absent.
+SKILL_BUNDLER="_byan/mcp/byan-mcp-server/bin/byan-build-skill-bundles.js"
+if [ -f "$SKILL_BUNDLER" ]; then
+  if ! node "$SKILL_BUNDLER" --check; then
+    echo ""
+    echo "Commit blocked : skill bundles are out of sync with .claude/skills/."
+    echo "Re-run 'node $SKILL_BUNDLER' then restage skill-bundles-manifest.json,"
+    echo "or bypass with 'git commit --no-verify' (emergency only)."
+    exit 1
+  fi
+fi
+
+if [ ! -f "$VALIDATOR" ]; then
+  exit 0
+fi
+
+staged=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^_byan/agent/[^/]+/[^/]+\.md$' || true)
+
+if [ -z "$staged" ]; then
+  exit 0
+fi
+
+failed=0
+while IFS= read -r file; do
+  [ -z "$file" ] && continue
+  [ ! -f "$file" ] && continue
+
+  # Skip dev/test/variant artifacts that are not shipped personas.
+  case "$file" in
+    *test*|*optimized*|*turbo-whisper*) continue ;;
+  esac
+
+  # Domain-aware score : resolve the persona's scope set, then score only the
+  # applicable mantras (universal + the persona's domain, behavioral excluded).
+  score=$(node -e "
+    const V = require('./$VALIDATOR');
+    const R = require('./$RESOLVER');
+    const fs = require('fs');
+    const path = require('path');
+    try {
+      const content = fs.readFileSync('$file', 'utf8');
+      const name = path.basename('$file').replace(/\\.md\$/, '');
+      const scopes = R.resolveAgentScopes({ name, content });
+      const res = new V().validate(content, { scope: scopes });
+      const pct = Math.round((res.compliant.length / res.totalMantras) * 100);
+      process.stdout.write(String(pct));
+    } catch (e) {
+      process.stderr.write(e.message);
+      process.stdout.write('0');
+    }
+  " 2>/dev/null || echo "0")
+
+  if [ -z "$score" ] || [ "$score" = "0" ]; then
+    continue
+  fi
+
+  if [ "$score" -lt "$THRESHOLD" ]; then
+    echo "[byan pre-commit] FAIL $file : mantra score $score% < $THRESHOLD% (anti-stub floor)"
+    failed=1
+  fi
+done <<< "$staged"
+
+if [ "$failed" -eq 1 ]; then
+  echo ""
+  echo "Commit blocked by BYAN mantra pre-commit floor."
+  echo "The flagged persona scores below the anti-stub floor : flesh it out, or bypass"
+  echo "with 'git commit --no-verify' (emergency only)."
+  exit 1
+fi
+
+exit 0

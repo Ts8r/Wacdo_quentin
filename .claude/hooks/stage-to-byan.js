@@ -16,6 +16,9 @@
 
 const fs = require('fs');
 const path = require('path');
+// Shared transcript reader — the real Stop payload has no inline transcript
+// (transcript_path JSONL). Without it extractTurn got null and never staged.
+const { extractRecentMessages } = require('./lib/transcript-read');
 
 const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
@@ -43,6 +46,8 @@ function readSettingsEnv() {
 function readMemorySyncConfig() {
   const paths = [
     path.join(projectDir, 'loadbalancer.yaml'),
+    // Gen3 split config first, then Gen2 root config.
+    path.join(projectDir, '_byan', 'context', 'config.yaml'),
     path.join(projectDir, '_byan', 'config.yaml'),
   ];
   for (const p of paths) {
@@ -58,11 +63,24 @@ function readMemorySyncConfig() {
   return null;
 }
 
+// Local opt-in override. Pure. A machine enables staging via BYAN_MEMORY_SYNC=1
+// (in the gitignored .claude/settings.local.json env, or process env) WITHOUT
+// touching _byan/config.yaml — that file is git-tracked + template-mirrored, so
+// a flag there would ship enabled:true to every install and break the
+// install-time consent design.
+function applyEnvEnable(memorySync, env = {}) {
+  if (String(env.BYAN_MEMORY_SYNC || '') === '1') {
+    return { ...memorySync, enabled: true };
+  }
+  return memorySync;
+}
+
 function buildConfig() {
   const settingsEnv = readSettingsEnv();
   const apiUrl = settingsEnv.BYAN_API_URL || process.env.BYAN_API_URL || null;
   const apiToken = settingsEnv.BYAN_API_TOKEN || process.env.BYAN_API_TOKEN || null;
-  const memorySync = readMemorySyncConfig() || {};
+  const mergedEnv = { ...process.env, ...settingsEnv };
+  const memorySync = applyEnvEnable(readMemorySyncConfig() || {}, mergedEnv);
   return {
     byan_api_url: apiUrl,
     byan_api_token: apiToken,
@@ -73,18 +91,18 @@ function buildConfig() {
 function extractTurn(payload) {
   if (!payload || typeof payload !== 'object') return null;
 
-  const transcript = payload.transcript || payload.messages;
-  if (!Array.isArray(transcript)) return null;
+  // Resolve from any payload shape: inline array (fixtures) or transcript_path
+  // JSONL (production). The last 4 user/assistant messages are the staged turn.
+  const messages = extractRecentMessages(payload, 4);
+  if (!messages) return null;
 
   return {
     sessionId: payload.session_id || payload.sessionId || null,
-    messages: transcript
-      .filter((m) => m && (m.role === 'user' || m.role === 'assistant'))
-      .slice(-4),
+    messages,
   };
 }
 
-(async () => {
+if (require.main === module) (async () => {
   const raw = await readStdin();
   let payload = {};
   try {
@@ -117,3 +135,5 @@ function extractTurn(payload) {
   process.stdout.write(JSON.stringify({ continue: true }));
   process.exit(0);
 })();
+
+module.exports = { applyEnvEnable, buildConfig, readMemorySyncConfig };

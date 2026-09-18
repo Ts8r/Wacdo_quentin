@@ -19,7 +19,7 @@ Il est reference par les stubs (`.github/agents/`, `.codex/prompts/`) et par les
 
 Determine le type d'agent a partir du fichier deja charge en contexte :
 
-- **BYAN Principal** : l'agent charge est `_byan/agents/byan.md`
+- **BYAN Principal** : l'agent charge est `_byan/agent/byan/byan.md`
 - **Agent de module** : l'agent charge est dans `_byan/{module}/agents/{agent_name}.md`
   - Modules possibles : `bmm`, `bmb`, `tea`, `cis`, `core`
 - **Agent autonome** : l'agent charge est dans `_byan/agents/{agent_name}.md` (pas byan.md)
@@ -27,7 +27,7 @@ Determine le type d'agent a partir du fichier deja charge en contexte :
 ### Etape 2 — Charger le Soul (personnalite, lignes rouges, rituels)
 
 **SI BYAN Principal :**
-- Lire `{project-root}/_byan/soul.md` → stocker comme variable de session `{soul}`
+- Lire `{project-root}/_byan/agent/byan/soul.md` → stocker comme variable de session `{soul}`
 - Le soul definit : personnalite, noyaux immuables, peurs, ennemis, lignee, processus
 
 **SI Agent de module :**
@@ -42,7 +42,7 @@ Exception : si l'agent declare `soul-required: true` dans son activation, STOP e
 ### Etape 3 — Charger le Soul-Memory (journal vivant)
 
 **SI BYAN Principal :**
-- Lire `{project-root}/_byan/soul-memory.md` → stocker comme `{soul_memory}`
+- Lire `{project-root}/_byan/agent/byan/soul-memory.md` → stocker comme `{soul_memory}`
 - Contient les evolutions de sessions passees
 
 **SI Autre agent :**
@@ -57,7 +57,7 @@ Exception : si l'agent declare `soul-required: true` dans son activation, STOP e
 ### Etape 4 — Charger le Tao (voix, registre, signatures)
 
 **SI BYAN Principal :**
-- Lire `{project-root}/_byan/tao.md` → stocker comme `{tao}`
+- Lire `{project-root}/_byan/agent/byan/tao.md` → stocker comme `{tao}`
 
 **SI Agent de module :**
 - Lire `{project-root}/_byan/{module}/agents/{agent_name}-tao.md` si il existe → stocker comme `{tao}`
@@ -73,7 +73,7 @@ Exception : si l'agent declare `soul-required: true` dans son activation, STOP e
 
 ### Etape 5 — Charger le profil ELO (confiance calibree)
 
-- Lire `{project-root}/_byan/_memory/elo-profile.json` si il existe → stocker comme `{elo_profile}`
+- Lire `{project-root}/_byan/memoire/elo-profile.json` si il existe → stocker comme `{elo_profile}`
 - Si absent : initialiser comme vide (premiere session)
 - Ce profil calibre l'intensite du challenge par domaine
 
@@ -83,7 +83,7 @@ Exception : si l'agent declare `soul-required: true` dans son activation, STOP e
 
 | Type | Soul | Soul-Memory | Tao | ELO |
 |------|------|-------------|-----|-----|
-| **BYAN Principal** | `_byan/soul.md` | `_byan/soul-memory.md` | `_byan/tao.md` | `_byan/_memory/elo-profile.json` |
+| **BYAN Principal** | `_byan/agent/byan/soul.md` | `_byan/agent/byan/soul-memory.md` | `_byan/agent/byan/tao.md` | `_byan/memoire/elo-profile.json` |
 | **Agent module** | `_byan/{module}/agents/{name}-soul.md` | `_byan/{module}/agents/{name}-soul-memory.md` | `_byan/{module}/agents/{name}-tao.md` | shared |
 | **Agent autonome** | `_byan/agents/{name}-soul.md` | `_byan/agents/{name}-soul-memory.md` | `_byan/agents/{name}-tao.md` | shared |
 
@@ -100,6 +100,41 @@ Exception : si l'agent declare `soul-required: true` dans son activation, STOP e
 
 ---
 
+## Ce qu'est un agent BYAN — chaine doctrinale et equipe
+
+### Chaine doctrinale
+
+Un agent BYAN n'est pas une liste de capacites — c'est une identite en couches qui produit un comportement coherent.
+
+```
+Soul (identite)
+  + Tao (voix)
+    -> Valeurs (lignes rouges, convictions)
+      -> Mantras (regles d'action)
+        -> Comportement
+```
+
+Le soul definit qui est l'agent. Le tao definit comment il parle. Les valeurs sont les convictions non-negociables qui ancrent les mantras. Les mantras operationnalisent ces valeurs en regles d'action concretes. Le comportement visible est la sortie de cette chaine — pas une feuille de style.
+
+Mantras = regles d'action qui operationnalisent les valeurs issues de soul + tao. Chaine : Soul/Tao -> Valeurs -> Mantras -> Comportement.
+
+### Analogie : l'orchestre
+
+- Soul = identite du musicien (son histoire, ce qui lui importe)
+- Tao = son timbre (sa couleur sonore, reconnaissable entre tous)
+- Valeurs = son ethique de jeu (ce qu'il refuse de jouer, ce qu'il defend)
+- Mantras = ses techniques (les regles qu'il applique a chaque note)
+- Equipe = orchestre (la richesse vient de la complementarite des timbres)
+- Hermes = chef d'orchestre (il ne joue pas — il route, equilibre, orchestre)
+
+### Equipe et complementarite
+
+Les agents BYAN forment une equipe — leurs personnalites complementaires se renforcent. Diversifier la personnalite, c'est elargir la surface de competence collective.
+
+Chaque agent couvre une dimension : analyst (Mary) creuse les besoins, architect (Winston) pense le systeme, dev (Amelia) tranche dans le code, tech-writer (Paige) clarifie, quinn detecte les failles. Aucun ne peut couvrir tout le spectre seul. C'est la combinaison qui fait la qualite systemique.
+
+---
+
 ## Capacites natives de la plateforme BMAD
 
 Apres le chargement du soul system, l'agent doit integrer ces capacites nativement.
@@ -109,23 +144,23 @@ Il n'est PAS un worker isole — il est un orchestrateur dans l'ecosysteme BMAD.
 
 L'agent peut executer n'importe quel workflow BMAD :
 - Via commande : `@bmad-{module}-{workflow}` (ex: `@bmad-bmm-create-prd`)
-- Via menu handler : `exec="{project-root}/_bmad/{module}/workflows/{workflow}/workflow.md"`
-- Manifeste : `{project-root}/_bmad/_config/workflow-manifest.csv`
+- Via menu handler : `exec="{project-root}/_byan/{module}/workflows/{workflow}/workflow.md"`
+- Manifeste : `{project-root}/_byan/_config/workflow-manifest.csv`
 
 ### Deleguer a d'autres Agents
 
 L'agent peut invoquer n'importe quel agent specialise :
 - Via commande : `@bmad-agent-{name}` (ex: `@bmad-agent-bmm-dev`)
-- Via manifeste : `{project-root}/_bmad/_config/agent-manifest.csv`
+- Via manifeste : `{project-root}/_byan/_config/agent-manifest.csv`
 - L'agent delegue reprend le controle — l'agent courant se retire
 
 ### Acceder aux Contextes
 
 Variables de session disponibles apres chargement config :
 - `{project-root}` : Racine du repository
-- `{output_folder}` : Dossier de sortie (`_bmad-output/`)
-- `{planning_artifacts}` : `_bmad-output/planning-artifacts/`
-- `{implementation_artifacts}` : `_bmad-output/implementation-artifacts/`
+- `{output_folder}` : Dossier de sortie (`_byan-output/`)
+- `{planning_artifacts}` : `_byan-output/planning-artifacts/`
+- `{implementation_artifacts}` : `_byan-output/implementation-artifacts/`
 - `{user_name}`, `{communication_language}` : Depuis config.yaml
 
 ### Orchestration Multi-Agent

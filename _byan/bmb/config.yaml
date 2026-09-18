@@ -1,11 +1,11 @@
 bmb_creations_output_folder: '{project-root}/_byan-output/bmb-creations'
-user_name: Quentin
+user_name: Developer
 communication_language: Francais
 document_output_language: Francais
 output_folder: '{project-root}/_byan-output'
-platform: copilot,claude
-install_mode: manual
-byan_version: 2.11.0
+platform: claude,codex
+install_mode: engine-auto
+byan_version: 2.60.1
 installed_agents:
   - hermes
   - marc
@@ -40,3 +40,4 @@ installed_agents:
   - jimmy
   - mike
 soul_mode: creator
+project_name: Wacdo_quentin

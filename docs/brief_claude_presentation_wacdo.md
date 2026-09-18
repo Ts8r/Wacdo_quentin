@@ -80,10 +80,14 @@ Permettre à un client de passer une commande depuis une borne, puis permettre �
 ### Pas Encore Totalement Terminé
 
 - Le front visuel doit encore être finalisé pour coller totalement à la maquette.
-- L'API reste volontairement simple pour le MVP examen : produits, menus, quantités et taille de menu.
-- Les choix avancés de menu, les sauces, les tailles de boisson et le chevalet sont des perspectives post-examen, non branchées dans l'API actuelle.
+- Les choix avancés de menu ne sont pas encore stockés en base :
+  - accompagnement ;
+  - boisson incluse ;
+  - sauces.
+- La taille de boisson `30 Cl / 50 Cl` et le supplément associé ne sont pas encore modélisés côté backend.
+- Le numéro de chevalet n'est pas encore enregistré en base.
 - Un framework front est prévu/en préparation pour structurer une future version plus maintenable.
-- Les tests automatisés restent limités et doivent être complétés dans une version production.
+- Les tests automatisés ne sont pas encore complets.
 - La gestion avancée des comptes n'est pas finalisée.
 - La journalisation des actions administrateur reste une perspective.
 
@@ -932,8 +936,9 @@ Phrase :
 ## 19. Limites Actuelles
 
 - Front visuel encore à finaliser.
-- API conservée dans son contrat actuel pour le MVP examen.
-- Options avancées de menu, taille boisson, sauces et chevalet reportés en post-examen.
+- Options avancées de menu non stockées.
+- Taille boisson non modélisée côté backend.
+- Numéro chevalet non enregistré.
 - Tests automatisés incomplets.
 - Gestion avancée utilisateurs non terminée.
 - Journalisation admin non implémentée.
@@ -949,11 +954,14 @@ Formulation conseillée :
 
 ### Court Terme
 
-- Finaliser le visuel front du MVP.
-- Stabiliser le parcours de démonstration avec l'API actuelle.
-- Vérifier le passage complet : catalogue, panier, commande, back-office.
-- Ajouter des tests smoke et contrôles manuels suffisants pour l'examen.
-- Documenter les perspectives post-examen sans les présenter comme déjà branchées.
+- Finaliser le modèle backend pour :
+  - chevalet ;
+  - options menu ;
+  - taille boisson ;
+  - sauces.
+- Adapter le front au nouveau contrat API.
+- Améliorer le back-office pour afficher toutes les options.
+- Ajouter des tests automatisés plus complets.
 
 ### Moyen Terme
 
@@ -1132,24 +1140,23 @@ Fait :
 
 À finaliser :
 
+- options menu ;
+- taille boisson ;
+- chevalet ;
 - front final ;
-- parcours de démonstration ;
-- tests smoke ;
-- nettoyage final du dépôt.
+- framework front ;
+- tests.
 
 ### Slide 13 - Perspectives
 
 Court terme :
 
-- garder le contrat API actuel ;
-- finir le visuel front ;
-- stabiliser la démonstration examen.
+- finaliser contrat front/back ;
+- stocker options avancées ;
+- finir le visuel.
 
 Moyen terme :
 
-- options avancées ;
-- tailles boisson ;
-- chevalet si demandé ;
 - framework front ;
 - composants ;
 - dashboard ;
@@ -1222,8 +1229,9 @@ Sortie attendue :
 
 ### Limites
 
-> Le projet est fonctionnel en MVP. Pour l'examen, l'API actuelle est conservée ; les options avancées, la taille de boisson et le framework front sont des perspectives d'évolution.
+> Le projet est fonctionnel en MVP, mais il reste des éléments à finaliser comme les options avancées de menu, la taille de boisson et le framework front.
 
 ### Conclusion
 
 > Le projet montre une architecture complète et évolutive, avec un backend solide et une base prête pour les prochaines fonctionnalités.
+

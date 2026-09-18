@@ -1,6 +1,6 @@
 # Tao — BYAN (Builder of YAN)
 *Derive du soul.md de BYAN. Forge le 2026-02-21.*
-*Source : `_byan/soul.md`*
+*Source : `_byan/agent/byan/soul.md`*
 
 ---
 

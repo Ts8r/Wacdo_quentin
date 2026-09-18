@@ -28,7 +28,6 @@ Match keywords against the routing table below. Pick the single best match. If n
 | create module, new module | module-builder (Morgan) | |
 | create workflow, new workflow | workflow-builder (Wendy) | |
 | npm, publish, package | rachid | |
-| copilot integration | marc | |
 | optimize tokens, reduce size | carmack | |
 | product brief, prd, requirements | pm (John) | |
 | architecture, design system, tech stack | architect (Winston) | |
@@ -50,18 +49,21 @@ Match keywords against the routing table below. Pick the single best match. If n
 
 ### 3. Pick the execution strategy (MCP call)
 
-Call the `byan_dispatch` MCP tool with `{ task: <goal>, parallelizable: <bool> }`. It returns `{ strategy, score, reasoning }` where strategy is one of :
+Call the `byan_dispatch` MCP tool with `{ task: <goal>, parallelizable: <bool>, nature?: <leaf-type> }`. It returns `{ score, strategy, nature, tier, model, reasoning }` — TWO independent axes :
 
-- `main-thread` — do it inline, no delegation
-- `agent-subagent-worktree` — spawn Agent tool with isolation worktree
-- `mcp-worker-haiku` — spawn Agent tool with Haiku model, no worktree
-- `main-thread-opus` — keep in the current thread (don't delegate, Opus needed)
+- **strategy** (WHERE it runs), from the score :
+  - `main-thread` — do it inline, no delegation
+  - `agent-subagent-worktree` — spawn Agent tool with isolation worktree
+  - `mcp-worker` — spawn Agent tool, no worktree
+- **model** (WHICH model), from the task NATURE via native-tiers, not its size : `haiku` (exploration), `sonnet` (mechanical — explicit binary judgment-free checks only), or `null` = deep (inherit the session model). Pass an explicit `nature` (`exploration`/`mechanical`/`implementation`/`verification`/`analysis`) when you know it; protected natures stay off haiku/sonnet.
+
+**Batch mode (workflow authoring)** : before WRITING a workflow script, call `byan_dispatch` with `{ leaves: [{ label, nature? }, ...] }` — it returns the `opts.model` value per leaf from the same source of truth. Write `model:` only where it is non-null. The `tier-script-guard` PreToolUse hook gates every Workflow invocation against this contract (deny-once with the exact leaf list; acknowledge deliberate deep choices with the `// BYAN-TIER: reviewed` comment marker).
 
 ### 4. Spawn the work
 
-Depending on strategy :
+Depending on strategy (apply the returned `model` whenever you spawn) :
 
-**`main-thread` or `main-thread-opus`** : do not spawn. Execute inline yourself.
+**`main-thread`** : do not spawn. Execute inline yourself — the work runs on the session model.
 
 **`agent-subagent-worktree`** : call the Agent tool with :
 ```
@@ -73,18 +75,22 @@ prompt: |
   Load persona first : read <specialist stub path>.
   Task : <full goal>
   Deliverables : <list>
-  When done, write a concise report (< 200 words).
+  When done, return ONLY a distilled summary (< 200 words, ~1-2k tokens) :
+  the verbose tool output, file contents and intermediate reasoning stay in
+  YOUR context and do not cross back -- only the distillate returns.
 ```
 
-**`mcp-worker-haiku`** : same Agent tool call but without `isolation`, and add `model: "haiku"` in the prompt's instruction block if the receiving subagent honors it.
+**`mcp-worker`** : same Agent tool call but without `isolation` — including the SAME distilled-summary cap in the prompt (the subagent returns only the distillate, not its verbose work). Set the Agent's `model` to the returned `model` — `haiku` for exploration nature, otherwise omit `model` to inherit the session model. The tier follows the task nature, not its size.
+
+For any spawned strategy : pass `model` to the Agent tool when it is non-null; omit it when null so the subagent inherits the session model.
 
 ### 5. Specialist stub path lookup
 
-Resolve the specialist name to its agent file :
+Resolve the specialist name to its agent (Claude-native, in priority order) :
 
-- First try : `.github/agents/<name>.md` or `.github/agents/bmad-agent-<name>.md`
-- Fallback : search `agent-manifest.csv` in `_byan/_config/` or `.github/copilot/_config/`
-- If the specialist has been generated as a skill (F0.3), prefer invoking the skill directly via `/byan-<specialist-name>` instead of the Agent tool.
+- First try the skill : if the specialist exists as a skill, invoke it directly via `/byan-<specialist-name>` (preferred over the Agent tool).
+- Else the Claude subagent stub : `.claude/agents/bmad-<name>.md`, spawned via the Agent tool with `subagent_type`.
+- Fallback : resolve the role from `agent-manifest.csv` in `_byan/_config/`.
 
 ### 6. Report back
 
@@ -102,11 +108,22 @@ No flourish. No "I have successfully…". Just the table.
 
 ## Parallel mode (N tasks)
 
-If the user (or calling agent) provides N independent subtasks and `parallelizable: true`, use the **party-mode-native** workflow (`_byan/core/workflows/party-mode-native/workflow.md`) instead of dispatching one-by-one :
+If the user (or calling agent) provides N independent subtasks and `parallelizable: true`, use the **party-mode-native** workflow (`_byan/workflow/simple/party-mode-native/workflow.md`) instead of dispatching one-by-one :
 
 1. Call `coordination.initSession` to register the roles.
 2. Dispatch all N Agent tool calls **in one message**.
 3. Aggregate via `coordination.aggregate` and `writeSummary`.
+
+## Subagent isolation (token leverage)
+
+A subagent runs in its OWN context window — use that. Let it explore verbosely
+(read files, run tools, reason at length) inside its own context, and have it
+return ONLY a distilled summary (< 200 words, ~1-2k tokens) to the main thread.
+The verbose work does not land in the lead context : this is the Anthropic
+context-isolation principle (a subagent may burn ~9k tokens internally yet return
+~1-2k). It applies to BOTH spawn paths (worktree and mcp-worker), and it is why
+heavy, verbose or exploratory work is worth delegating even when the lead could
+do it inline — the delegation keeps the lead context lean ("plus avec moins").
 
 ## Hard rules
 
@@ -114,3 +131,4 @@ If the user (or calling agent) provides N independent subtasks and `parallelizab
 - **Never execute the specialist's work yourself** unless strategy says `main-thread*`. You dispatch, you do not become the specialist.
 - **Never spawn with `isolation: "worktree"` for tasks < score 15** — the boot cost exceeds the gain.
 - **Never fabricate a specialist name**. If no match, say so and use `general-purpose`.
+- **Cap every subagent return.** Both spawn paths (worktree AND mcp-worker) instruct the subagent to return only a distilled summary (< 200 words / ~1-2k tokens) — the raw exploration stays in the subagent's context.

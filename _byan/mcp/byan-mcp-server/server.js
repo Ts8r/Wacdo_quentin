@@ -8,9 +8,13 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { dispatch } from './lib/dispatch.js';
+import { dispatch, dispatchBatch } from './lib/dispatch.js';
+import { resolveConfig } from './lib/resolve-config.js';
+import { harvest as harvestInsights, renderDigest as renderInsightDigest } from './lib/insight-harvest.js';
+import { appendOutcome } from './lib/outcome-buffer.js';
+import { validateForLog, eloOutcomeForStrictComplete } from './lib/advisory-autofeed.js';
 import { readSoul, appendSoulMemory } from './lib/soul.js';
-import { listSessions, readSessionEvents, searchSessions } from './lib/copilot.js';
+import { createPublisher as createGdocPublisher } from './lib/gdoc-client.js';
 import {
   start as fdStart,
   status as fdStatus,
@@ -19,6 +23,11 @@ import {
   abort as fdAbort,
   ALL_PHASES as FD_PHASES,
 } from './lib/fd-state.js';
+import {
+  record as suitabilityRecord,
+  reportLedger as suitabilityReport,
+  ledgerPath as suitabilityLedgerPath,
+} from './lib/suitability-store.js';
 import {
   requestReview,
   recordVerdict,
@@ -45,16 +54,77 @@ import {
   fcCheck,
   fcParse,
 } from './lib/cli.js';
+import { checkForUpdate, formatApplyInstructions } from './lib/update.js';
+import {
+  lockScope as strictLockScope,
+  selfVerify as strictSelfVerify,
+  complete as strictComplete,
+  getStatus as strictGetStatus,
+  abort as strictAbort,
+  checkAuditTrail as strictCheckAuditTrail,
+} from './lib/strict-mode.js';
+import { detectActivation as strictDetectActivation } from './lib/strict-activation.js';
+import {
+  pushLock as strictPushLock,
+  pushVerify as strictPushVerify,
+  pushComplete as strictPushComplete,
+  pushAbort as strictPushAbort,
+  fetchSession as strictFetchSession,
+  syncEnabled as strictSyncEnabled,
+  resolveProjectId as strictResolveProjectId,
+} from './lib/strict-sync.js';
+import {
+  syncEnabled as leantimeEnabled,
+  rpc as leantimeRpc,
+  ensureProject as leantimeEnsureProject,
+  createTask as leantimeCreateTask,
+  moveTask as leantimeMoveTask,
+  assignTask as leantimeAssignTask,
+  getTask as leantimeGetTask,
+  getBoard as leantimeGetBoard,
+  METHODS as LEANTIME_METHODS,
+} from './lib/leantime-sync.js';
 
-const BYAN_API_URL = process.env.BYAN_API_URL || 'http://localhost:3737';
-const BYAN_API_TOKEN = process.env.BYAN_API_TOKEN || '';
+// Compact view of a best-effort strict-sync result for tool responses.
+function syncResult(sync) {
+  if (!sync) return { synced: false, reason: 'no_result' };
+  return sync.synced ? { synced: true } : { synced: false, reason: sync.reason || 'unknown' };
+}
+import { fileURLToPath } from 'node:url';
 
-const authHeaders = () => {
-  if (!BYAN_API_TOKEN) return {};
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = nodePath.dirname(__filename);
+// Resolve the host project root: server.js lives at
+// {projectRoot}/_byan/mcp/byan-mcp-server/server.js, so go up three levels.
+const PROJECT_ROOT = nodePath.resolve(__dirname, '..', '..', '..');
+
+// Config resolution (F1): precedence process.env -> ~/.byan/credentials.json
+// -> localhost default, with an unexpanded ${..} env value treated as absent.
+// The resolver (lib/resolve-config.js) owns this so the server works regardless
+// of how it was launched (Claude Code ${} expansion, Codex, raw stdio) and
+// across shells/OSes. We backfill process.env with the resolved values so every
+// downstream reader (requireLeantime, the Leantime client) sees a real value
+// instead of the literal "${...}" placeholder that breaks byan_web calls.
+const RESOLVED_CONFIG = resolveConfig();
+for (const k of ['BYAN_API_URL', 'BYAN_API_TOKEN', 'LEANTIME_API_URL', 'LEANTIME_API_TOKEN']) {
+  if (RESOLVED_CONFIG[k]) process.env[k] = RESOLVED_CONFIG[k];
+}
+
+const BYAN_API_URL = RESOLVED_CONFIG.BYAN_API_URL;
+// Local-dev / single-user fallback token. On the remote HTTP transport the
+// real identity is the PER-REQUEST token (see createByanServer), so this env
+// value is only the floor when no per-request token is supplied (stdio).
+const ENV_API_TOKEN = RESOLVED_CONFIG.BYAN_API_TOKEN;
+
+// Per-call auth header builder. The token is passed EXPLICITLY (per-request on
+// the remote transport; the env token locally) so a shared connector process
+// never collapses every caller onto one identity.
+const authHeadersFor = (token) => {
+  if (!token) return {};
   // byan_web issues API keys prefixed with `byan_` and requires the
   // `ApiKey` scheme. Any other token (JWT, etc.) falls back to Bearer.
-  const scheme = BYAN_API_TOKEN.startsWith('byan_') ? 'ApiKey' : 'Bearer';
-  return { Authorization: `${scheme} ${BYAN_API_TOKEN}` };
+  const scheme = token.startsWith('byan_') ? 'ApiKey' : 'Bearer';
+  return { Authorization: `${scheme} ${token}` };
 };
 
 function buildQuery(params) {
@@ -67,21 +137,31 @@ function buildQuery(params) {
   return s ? `?${s}` : '';
 }
 
-function requireToken() {
-  if (!BYAN_API_TOKEN) {
+function requireTokenFor(token) {
+  if (!token) {
     throw new Error('BYAN_API_TOKEN env var is required for this tool.');
   }
 }
 
-async function apiRequest(path, options = {}) {
+// Leantime uses its OWN env pair (LEANTIME_API_URL/LEANTIME_API_TOKEN), kept
+// distinct from BYAN_API_URL so the two backends never get crossed.
+function requireLeantime() {
+  if (!process.env.LEANTIME_API_URL || !process.env.LEANTIME_API_TOKEN) {
+    throw new Error('LEANTIME_API_URL + LEANTIME_API_TOKEN env vars are required for byan_leantime_* tools.');
+  }
+}
+
+async function apiRequestFor(path, options = {}, token) {
   const url = `${BYAN_API_URL}${path}`;
   const headers = {
     'Content-Type': 'application/json',
-    ...authHeaders(),
+    ...authHeadersFor(token),
     ...(options.headers || {}),
   };
   const res = await fetch(url, { ...options, headers });
   const text = await res.text();
+  const contentType = (res.headers.get('content-type') || '').toLowerCase();
+  const isJson = contentType.includes('application/json');
   let body;
   try {
     body = text ? JSON.parse(text) : null;
@@ -92,6 +172,19 @@ async function apiRequest(path, options = {}) {
     const err = new Error(`${res.status} ${res.statusText}: ${text}`);
     err.status = res.status;
     err.body = body;
+    throw err;
+  }
+  // A 200 carrying HTML almost certainly means BYAN_API_URL points at the
+  // WebUI host (behind Authentik SSO) instead of the API backend.
+  // Never let a non-JSON response through — it used to fall back to
+  // `body.data || []` and silently pretend the API was empty.
+  if (!isJson) {
+    const hint = contentType.includes('text/html')
+      ? 'Expected JSON, got HTML. Likely BYAN_API_URL points at the WebUI (byan.<domain>) instead of the API (byan-api.<domain>).'
+      : `Expected JSON, got content-type: ${contentType || '(none)'}.`;
+    const err = new Error(`${hint} URL=${url}`);
+    err.status = res.status;
+    err.nonJson = true;
     throw err;
   }
   return body;
@@ -202,7 +295,7 @@ const tools = [
   {
     name: 'byan_import_project',
     description:
-      'Import a local project directory into byan_web. Reads files from the local filesystem (client-side) and uploads them as a payload; works whether byan_web is local or remote. Skips .git, node_modules, dist, build, coverage, *.log, *.sqlite. Limits: 10000 files, 100MB total. Requires auth.',
+      'Import a local project directory into byan_web. Reads files from the local filesystem (client-side) and uploads them as a payload; works whether byan_web is local or remote. Skips .git, node_modules, dist, build, coverage, *.log, *.sqlite. Limits: 10000 files, 100MB total. Requires auth. If projectId is provided, files attach to that project ; otherwise a new project is created from name (or directory basename).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -210,11 +303,19 @@ const tools = [
           type: 'string',
           description: 'Absolute path to the project directory on THIS machine (the MCP client). The API does not need filesystem access to this path.',
         },
-        name: { type: 'string', description: 'Optional project name override.' },
+        projectId: {
+          type: 'string',
+          description: 'Existing project id to attach the files to. If absent, a new project is created.',
+        },
+        name: { type: 'string', description: 'Project name override (used only when projectId is absent).' },
         type: {
           type: 'string',
           enum: ['dev', 'training'],
-          description: 'Project type. Default: dev.',
+          description: 'Project type for new project creation. Default: dev. Ignored when projectId is provided.',
+        },
+        autoCreateNodes: {
+          type: 'boolean',
+          description: 'When true, auto-create knowledge nodes from file directory structure. Default: false.',
         },
         maxFiles: {
           type: 'number',
@@ -232,11 +333,11 @@ const tools = [
   {
     name: 'byan_dispatch',
     description:
-      'BYAN Dispatcher: given a task description and complexity score (0-100), route it to the optimal execution target. Rule-based, no API call. Returns route and reasoning.',
+      'BYAN Dispatcher: routes a unit of work along two independent axes. STRATEGY (where it runs: main-thread / agent-subagent-worktree / mcp-worker) from the scalar score + parallelizable. TIER (which model) from the task NATURE via native-tiers (the single source of truth): exploration downgrades to haiku, explicit mechanical checks to sonnet; implementation/verification/analysis stay deep (inherit the session model); never pins up to opus. Rule-based, no API call. Returns { score, strategy, nature, tier, model, reasoning }. BATCH mode: pass `leaves` (array of { label, nature? }) to tier every agent() leaf of a workflow script BEFORE writing it — returns one { label, nature, tier, model } per leaf, no strategy axis.',
     inputSchema: {
       type: 'object',
       properties: {
-        task: { type: 'string', description: 'Short task description.' },
+        task: { type: 'string', description: 'Short task description. Required unless `leaves` is passed (batch mode).' },
         complexity: {
           type: 'number',
           description: 'Complexity score 0-100 (optional, will estimate from task length if absent).',
@@ -245,8 +346,28 @@ const tools = [
           type: 'boolean',
           description: 'Is the task parallelizable with other tasks?',
         },
+        nature: {
+          type: 'string',
+          enum: ['exploration', 'mechanical', 'implementation', 'verification', 'analysis'],
+          description: 'Optional task nature. A valid value sets the model tier directly; otherwise the nature is classified from the task text. Exploration (haiku) and mechanical (sonnet) are the only downgrade-safe natures.',
+        },
+        leaves: {
+          type: 'array',
+          description: 'Batch mode: the planned agent() leaves of a workflow script, each { label, nature? }. Returns the opts.model value per leaf; write model: only where it is non-null.',
+          items: {
+            type: 'object',
+            properties: {
+              label: { type: 'string', description: 'The leaf label (the curated signal classifyLeaf keys on).' },
+              nature: {
+                type: 'string',
+                enum: ['exploration', 'mechanical', 'implementation', 'verification', 'analysis'],
+                description: 'Optional explicit nature; wins over label classification.',
+              },
+            },
+            additionalProperties: false,
+          },
+        },
       },
-      required: ['task'],
       additionalProperties: false,
     },
   },
@@ -340,47 +461,19 @@ const tools = [
     },
   },
   {
-    name: 'byan_copilot_sessions',
-    description:
-      'List GitHub Copilot CLI sessions stored locally at ~/.copilot/session-state/. Returns sessionId, start/end time, cwd, branch, agent name, message and tool call counts. Sorted most-recent-first. Use to discover past Copilot CLI conversations for reference or import.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        limit: { type: 'number', description: 'Max sessions to return (default 20).' },
-        sinceIso: { type: 'string', description: 'ISO timestamp filter — only sessions started after this.' },
-        cwdFilter: { type: 'string', description: 'Substring match on session cwd (e.g. "byan_web").' },
-      },
-      additionalProperties: false,
-    },
-  },
-  {
-    name: 'byan_copilot_session_events',
-    description:
-      'Read events of a specific Copilot CLI session (events.jsonl). Optionally filter by event type (user.message, assistant.message, tool.execution_start, etc.). Useful to inspect the flow of a past session.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        sessionId: { type: 'string', description: 'Session UUID from byan_copilot_sessions.' },
-        types: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Filter to these event types only.',
-        },
-        limit: { type: 'number', description: 'Max events (default 200).' },
-      },
-      required: ['sessionId'],
-      additionalProperties: false,
-    },
-  },
-  {
     name: 'byan_fd_start',
     description:
-      'Start a new Feature Development (FD) cycle for BYAN. Writes _byan-output/fd-state.json with phase=BRAINSTORM. Rejects if another FD is already in progress (unless force=true).',
+      'Start a new Feature Development (FD) cycle for BYAN. Writes _byan-output/fd-state.json with phase=DISCOVERY. Rejects if another FD is already in progress (unless force=true).',
     inputSchema: {
       type: 'object',
       properties: {
         featureName: { type: 'string', description: 'Short slug for the feature.' },
         force: { type: 'boolean', description: 'Overwrite an existing in-progress FD.' },
+        strict: {
+          type: 'boolean',
+          description:
+            'Start the FD under BYAN Strict Mode. Records strict_mode=true and signals that the scope must be locked (byan_strict_lock_scope) before BUILD.',
+        },
       },
       required: ['featureName'],
       additionalProperties: false,
@@ -395,13 +488,25 @@ const tools = [
   {
     name: 'byan_fd_advance',
     description:
-      'Transition the current FD session to another phase. Valid targets : BRAINSTORM | PRUNE | DISPATCH | BUILD | VALIDATE | COMPLETED | ABORTED. Rejects backward moves (except abort).',
+      'Transition the current FD session to another phase. Valid targets : DISCOVERY | BRAINSTORM | PRUNE | DISPATCH | BUILD | REVIEW | VALIDATE | REFACTOR | DOC | COMPLETED | ABORTED. Rejects backward moves except REFACTOR->BUILD (rework loop) and ABORTED/COMPLETED.',
     inputSchema: {
       type: 'object',
       properties: {
         to: {
           type: 'string',
-          enum: ['BRAINSTORM', 'PRUNE', 'DISPATCH', 'BUILD', 'VALIDATE', 'COMPLETED', 'ABORTED'],
+          enum: [
+            'DISCOVERY',
+            'BRAINSTORM',
+            'PRUNE',
+            'DISPATCH',
+            'BUILD',
+            'REVIEW',
+            'VALIDATE',
+            'REFACTOR',
+            'DOC',
+            'COMPLETED',
+            'ABORTED',
+          ],
         },
         note: { type: 'string', description: 'Optional gate-crossing rationale.' },
       },
@@ -412,7 +517,7 @@ const tools = [
   {
     name: 'byan_fd_update',
     description:
-      'Patch fields on the active FD state. Allowed keys : backlog, dispatch_table, commits, notes, feature_name. Rejects unknown keys.',
+      'Patch fields on the active FD state. Allowed keys : project_context, raw_ideas, backlog, dispatch_table, commits, review_findings, validate_verdict, refactor_log, doc_log, notes, feature_name. Rejects unknown keys.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -429,6 +534,161 @@ const tools = [
     inputSchema: {
       type: 'object',
       properties: { reason: { type: 'string' } },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'byan_suitability_record',
+    description:
+      'Record one adequacy outcome for a (model x leaf) pair into the model-suitability ledger (advisory only). success=true means the cheap model was adequate on this leaf; false means it was not. Best-effort: a persistence failure degrades to { recorded: false } and never throws. This is the ONLY write path to the ledger (workflow scripts cannot write state).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        model: { type: 'string', description: 'Model tier/id the leaf ran on (e.g. haiku).' },
+        leafId: { type: 'string', description: 'Stable leaf label (e.g. load-story).' },
+        success: {
+          type: 'boolean',
+          description: 'true = cheap model adequate on this leaf; false = inadequate.',
+        },
+        source: { type: 'string', description: 'Optional provenance tag (e.g. adversarial-pass).' },
+      },
+      required: ['model', 'leafId', 'success'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'byan_suitability_report',
+    description:
+      'Read the model-suitability ledger as advisory ratings (most-actionable first). Each row carries the credible LOWER bound and the sample size n, never a bare point estimate, plus a verdict keep-cheap | watch | demote. ADVISORY ONLY: it never edits routing; a human decides. Optional model filter.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        model: { type: 'string', description: 'Optional: restrict to this model tier/id.' },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'byan_insight_digest',
+    description:
+      'Harvest native Claude Code outcome trails (tool-log, strict-audit gaps, the suitability ledger, ELO) into a GATED improvement digest for BYAN. Read-only: it OBSERVES and PROPOSES; every proposal is gated for a human to ratify, nothing is auto-applied to routing / personas / mantras. Returns { toolHealth, recurringGaps, routingOutcomes, eloTrends, proposals }.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'byan_outcome_log',
+    description:
+      'Log one ADVISORY outcome to the auto-feed buffer (cheap append; it never writes a ledger directly). The drain-advisory Stop hook records buffered outcomes into the ELO / suitability ledgers at end of turn, so BYAN auto-learns without the agent recording by hand. kind=elo needs { domain, result: VALIDATED|PARTIAL|BLOCKED }; kind=suitability needs { model, leafId, success }. Advisory-only: behavior surfaces (routing / personas / mantras) are never written.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        kind: { type: 'string', enum: ['elo', 'suitability'] },
+        domain: { type: 'string', description: 'elo: the technical domain of the claim' },
+        result: { type: 'string', enum: ['VALIDATED', 'PARTIAL', 'BLOCKED'], description: 'elo: the claim verdict' },
+        model: { type: 'string', description: 'suitability: the cheap model tier/id' },
+        leafId: { type: 'string', description: 'suitability: the workflow leaf' },
+        success: { type: 'boolean', description: 'suitability: did the cheap model survive adversarial review' },
+      },
+      required: ['kind'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'byan_strict_lock_scope',
+    description:
+      'Lock a scope for a BYAN Strict Mode session. Records explicit acceptance criteria and allowed paths. Subsequent work is gated against this scope hash. Pass force=true to relock with a different scope (resets self-verify passes).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        scopeText: {
+          type: 'string',
+          description: 'Description of the scope (≥ 10 chars). Required.',
+        },
+        acceptanceCriteria: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Non-empty array of explicit deliverable criteria.',
+        },
+        allowedPaths: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Glob patterns of paths the agent may modify.',
+        },
+        domain: {
+          type: 'string',
+          description: 'Optional explicit ELO domain (e.g. security, performance, javascript). When set, a successful byan_strict_complete feeds one VALIDATED outcome to the ELO learning loop. Recorded verbatim (your explicit input, never inferred from text); omit to feed nothing.',
+        },
+        force: { type: 'boolean', description: 'Relock with different scope.' },
+        projectId: {
+          type: 'string',
+          description: 'byan_web project id to attach this session to (authority side). Optional; falls back to BYAN_PROJECT_ID env.',
+        },
+        featureName: {
+          type: 'string',
+          description: 'Short feature name for the session (e.g. the FD feature slug). Optional.',
+        },
+      },
+      required: ['scopeText', 'acceptanceCriteria'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'byan_strict_self_verify',
+    description:
+      'Record one self-verify pass against the locked scope. verdict="ok" (zero gaps) or "gap" (findings required). Strict mode requires ≥ 3 passes with the final pass returning "ok" before byan_strict_complete can succeed.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        verdict: {
+          type: 'string',
+          enum: ['ok', 'gap'],
+          description: '"ok" = no gap found ; "gap" = gap found, findings required.',
+        },
+        findings: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Array of gap descriptions. Required when verdict="gap".',
+        },
+      },
+      required: ['verdict'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'byan_strict_complete',
+    description:
+      'Mark the strict session complete. Requires scope locked, ≥ 3 self-verify passes, last pass verdict="ok". Returns audit_token used by the pre-commit hook to authorize the commit.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+  {
+    name: 'byan_strict_status',
+    description:
+      'Return current strict mode state : scope_locked, scope_hash, acceptance_criteria, pass_count, min_passes, completed, audit_token.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+  {
+    name: 'byan_strict_abort',
+    description:
+      'Abort the current strict session. Marks inactive in state.json and appends abort entry to audit.log. State preserved for inspection.',
+    inputSchema: {
+      type: 'object',
+      properties: { reason: { type: 'string' } },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'byan_strict_suggest',
+    description:
+      'Check whether a piece of text (user request, feature name) signals a production-grade deliverable that should be built under strict mode. Reads activation keywords from _byan/_config/strict-mode.yaml. Returns { suggested, matched, message }. Use on any platform (Codex has no in-session hook) to decide whether to lock strict mode.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'The request or feature description to scan.' },
+      },
+      required: ['text'],
       additionalProperties: false,
     },
   },
@@ -612,25 +872,6 @@ const tools = [
       additionalProperties: false,
     },
   },
-  {
-    name: 'byan_copilot_search',
-    description:
-      'Full-text search across all Copilot CLI sessions. Finds messages (user + assistant by default) containing the query string. Returns sessionId + timestamp + excerpt. Use to recall past discussions without knowing which session they were in.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        query: { type: 'string', description: 'Substring to search for (case-insensitive).' },
-        types: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Event types to scan (default: user.message, assistant.message).',
-        },
-        limit: { type: 'number', description: 'Max matches (default 50).' },
-      },
-      required: ['query'],
-      additionalProperties: false,
-    },
-  },
 
   // ─── Projects ─────────────────────────────────────────────────────────
   {
@@ -729,56 +970,95 @@ const tools = [
   },
 
   // ─── Knowledge ────────────────────────────────────────────────────────
+  // Routes: GET /api/projects/:projectId/knowledge (RBAC viewer)
+  //         GET /api/projects/:projectId/knowledge/:id (RBAC viewer)
+  // The flat /api/knowledge surface was decommissioned (IDOR — no RBAC).
   {
     name: 'byan_api_knowledge_list',
     description:
-      'List knowledge entries, optionally filtered by project, category, tags, or limit. GET /api/knowledge. Requires BYAN_API_TOKEN.',
+      'List knowledge entries for a project. GET /api/projects/:projectId/knowledge. projectId is required (the flat /api/knowledge surface was decommissioned for IDOR). Requires BYAN_API_TOKEN.',
     inputSchema: {
       type: 'object',
       properties: {
-        projectId: { type: 'string' },
+        projectId: { type: 'string', description: 'Project id (required).' },
         category: { type: 'string' },
-        tags: { type: 'string', description: 'Comma-separated tag list.' },
+        tags: { type: 'string', description: 'Tag filter (substring match).' },
+        nodeId: { type: 'string', description: 'Filter by node id (includes child nodes).' },
         limit: { type: 'number' },
       },
+      required: ['projectId'],
       additionalProperties: false,
     },
   },
   {
     name: 'byan_api_knowledge_get',
     description:
-      'Fetch a single knowledge entry by id. GET /api/knowledge/:id. Requires BYAN_API_TOKEN.',
+      'Fetch a single knowledge entry by id within a project. GET /api/projects/:projectId/knowledge/:id. Both projectId and id are required (RBAC guard). Requires BYAN_API_TOKEN.',
     inputSchema: {
       type: 'object',
-      properties: { id: { type: 'string', description: 'Knowledge entry id.' } },
-      required: ['id'],
+      properties: {
+        projectId: { type: 'string', description: 'Project id (required for RBAC).' },
+        id: { type: 'string', description: 'Knowledge entry id.' },
+      },
+      required: ['projectId', 'id'],
+      additionalProperties: false,
+    },
+  },
+  // Selective RAG retrieval — returns the top-k most relevant knowledge bodies
+  // VERBATIM (never truncated; negations/prohibitions are returned intact).
+  // GET /api/projects/:projectId/knowledge/retrieve?q=...&k=10&tokenBudget=0
+  // Backed by PG FTS (ts_rank) in prod, LIKE-degraded on SQLite (dev/tests).
+  // Use this instead of knowledge_list when you only need a focused subset.
+  {
+    name: 'byan_api_knowledge_retrieve',
+    description:
+      'Retrieve the top-k most relevant knowledge entries for a query using full-text search (PG) or LIKE fallback (SQLite). Returns bodies VERBATIM — negations and prohibitions are never truncated. GET /api/projects/:projectId/knowledge/retrieve?q=...&k=10&tokenBudget=0. RBAC viewer required. projectId and q are required. Requires BYAN_API_TOKEN.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectId: { type: 'string', description: 'Project id (required — RBAC guard).' },
+        q: { type: 'string', description: 'Search query (required).' },
+        k: { type: 'number', description: 'Max number of results (default 10).' },
+        tokenBudget: { type: 'number', description: 'Total token budget (0 = unlimited).' },
+      },
+      required: ['projectId', 'q'],
       additionalProperties: false,
     },
   },
 
   // ─── Memory ───────────────────────────────────────────────────────────
+  // Route: GET /api/projects/:projectId/memory (RBAC viewer)
+  // The flat /api/memory surface was decommissioned (IDOR).
+  // Full-text memory search: use byan_api_search with q + project_id.
   {
     name: 'byan_api_memory_list',
     description:
-      'List memory entries, optionally filtered by project, category, type, or limit. GET /api/memory. Requires BYAN_API_TOKEN.',
+      'List memory entries for a project. GET /api/projects/:projectId/memory. projectId is required (the flat /api/memory surface was decommissioned for IDOR). Optionally filter by category, layer, nodeId, sessionId, limit, includePinned. Requires BYAN_API_TOKEN.',
     inputSchema: {
       type: 'object',
       properties: {
-        projectId: { type: 'string' },
+        projectId: { type: 'string', description: 'Project id (required).' },
         category: { type: 'string' },
-        type: { type: 'string' },
+        layer: { type: 'string', description: 'Memory layer filter (e.g. short_term, long_term).' },
+        nodeId: { type: 'string' },
+        sessionId: { type: 'string' },
+        includePinned: { type: 'boolean' },
         limit: { type: 'number' },
       },
+      required: ['projectId'],
       additionalProperties: false,
     },
   },
   {
     name: 'byan_api_memory_search',
     description:
-      'Full-text search across memory entries. GET /api/memory/search. Requires BYAN_API_TOKEN.',
+      'Full-text search over project knowledge and nodes (covers memory indirectly). Routes to GET /api/search?q=...&project_id=... — the dedicated /api/memory/search surface was decommissioned. For structured memory recall use byan_api_memory_list with category/layer filters. Requires BYAN_API_TOKEN.',
     inputSchema: {
       type: 'object',
-      properties: { q: { type: 'string', description: 'Search query.' } },
+      properties: {
+        q: { type: 'string', description: 'Search query.' },
+        projectId: { type: 'string', description: 'Optional project id to scope the search.' },
+      },
       required: ['q'],
       additionalProperties: false,
     },
@@ -817,35 +1097,38 @@ const tools = [
   },
 
   // ─── Sessions ─────────────────────────────────────────────────────────
+  // Routes: GET /api/projects/:projectId/sessions (RBAC viewer)
+  //         GET /api/projects/:projectId/sessions/:id (RBAC viewer)
+  // The flat /api/sessions surface was decommissioned (IDOR).
+  // Note: there is no /history sub-route on project-scoped sessions;
+  // byan_api_sessions_history has been removed from this surface.
   {
     name: 'byan_api_sessions_list',
     description:
-      'List byan_web sessions, optionally filtered by project. GET /api/sessions. Requires BYAN_API_TOKEN.',
+      'List project sessions. GET /api/projects/:projectId/sessions. projectId is required (the flat /api/sessions surface was decommissioned for IDOR). Optionally filter by userId, cliSource, limit. Requires BYAN_API_TOKEN.',
     inputSchema: {
       type: 'object',
-      properties: { projectId: { type: 'string' } },
+      properties: {
+        projectId: { type: 'string', description: 'Project id (required).' },
+        userId: { type: 'string' },
+        cliSource: { type: 'string' },
+        limit: { type: 'number' },
+      },
+      required: ['projectId'],
       additionalProperties: false,
     },
   },
   {
     name: 'byan_api_sessions_get',
     description:
-      'Fetch a single session by id. GET /api/sessions/:id. Requires BYAN_API_TOKEN.',
+      'Fetch a single project session by id. GET /api/projects/:projectId/sessions/:id. Both projectId and id are required (RBAC guard). Requires BYAN_API_TOKEN.',
     inputSchema: {
       type: 'object',
-      properties: { id: { type: 'string', description: 'Session id.' } },
-      required: ['id'],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: 'byan_api_sessions_history',
-    description:
-      'Fetch the message/event history of a session. GET /api/sessions/:id/history. Requires BYAN_API_TOKEN.',
-    inputSchema: {
-      type: 'object',
-      properties: { id: { type: 'string', description: 'Session id.' } },
-      required: ['id'],
+      properties: {
+        projectId: { type: 'string', description: 'Project id (required for RBAC).' },
+        id: { type: 'string', description: 'Session id.' },
+      },
+      required: ['projectId', 'id'],
       additionalProperties: false,
     },
   },
@@ -933,19 +1216,311 @@ const tools = [
       additionalProperties: false,
     },
   },
+  {
+    name: 'byan_update_check',
+    description:
+      'Check whether the BYAN platform installed in this project is up to date. Read-only. Reads the installed version from _byan/.manifest.json (fallback: package.json), fetches the latest published version from the npm registry (registry.npmjs.org/create-byan-agent), compares them, and returns { installed, latest, updateAvailable, delta }. Network failures are reported (networkError) and treated as "do not block". Use at agent activation to surface updates without nagging.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'byan_update_apply',
+    description:
+      'Returns the exact shell command the user must run to apply a BYAN update via the yanstaller pipeline (backup, diff vs latest npm template, merge non-user-modified files). Does NOT execute anything itself — update is destructive and must remain an explicit user action. Use after byan_update_check reports updateAvailable=true and the user has consented.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        preview: {
+          type: 'boolean',
+          description: 'If true, returns the --preview command (shows the diff without writing). Default: false.',
+        },
+        force: {
+          type: 'boolean',
+          description: 'If true, returns the --force command (overrides user-modified files). Default: false. Use with caution.',
+        },
+      },
+      additionalProperties: false,
+    },
+  },
+
+  // ─── Leantime (project-management mirror) ─────────────────────────────
+  // Client-side automation of the self-hosted Leantime JSON-RPC API. Used by
+  // the FD workflow to create a project + a task per feature and move task
+  // status across phases. Needs LEANTIME_API_URL + LEANTIME_API_TOKEN.
+  {
+    name: 'byan_leantime_ping',
+    description:
+      'Healthcheck the Leantime integration: reports api_url, token presence, and (if configured) whether the JSON-RPC API is reachable. Surfaces the wrong-host guard (HTML instead of JSON). No required args.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+  {
+    name: 'byan_leantime_project_ensure',
+    description:
+      'Idempotent create-or-fetch of a Leantime project from the FD project_context. Matches an existing project by name first (no duplicate on FD re-run). Returns { id, created }. Requires LEANTIME_API_*.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Project name (defaults to slug).' },
+        slug: { type: 'string', description: 'Project slug (fallback name).' },
+        clientId: { type: 'number', description: 'Owning Leantime client id. Resolved if omitted.' },
+        details: { type: 'string', description: 'Optional project description.' },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'byan_leantime_task_create',
+    description:
+      'Create one Leantime task (ticket) from an FD backlog item. Returns the new task id to store back in fd-state (caller owns idempotency: create only if the item has no leantime_task_id). Requires LEANTIME_API_*.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectId: { type: 'number', description: 'Leantime project id.' },
+        headline: { type: 'string', description: 'Task title.' },
+        description: { type: 'string' },
+        status: { type: 'number', description: 'Leantime status id (optional).' },
+        priority: { type: 'number' },
+        editorId: { type: 'number', description: 'Assignee/editor user id.' },
+        tags: { type: 'string' },
+        type: { type: 'string', description: "Ticket type, default 'task'." },
+      },
+      required: ['projectId', 'headline'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'byan_leantime_task_move',
+    description:
+      'Move a Leantime task to a lifecycle column (todo|doing|blocked|review|done). Resolves the column to the project status id, then updates the ticket. Requires LEANTIME_API_*.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        taskId: { type: 'number', description: 'Leantime ticket id.' },
+        projectId: { type: 'number', description: 'Project id (for status resolution).' },
+        column: { type: 'string', enum: ['todo', 'doing', 'blocked', 'review', 'done'] },
+        status: { type: 'number', description: 'Explicit status id (bypasses column resolution).' },
+      },
+      required: ['taskId'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'byan_leantime_task_assign',
+    description: 'Set the assignee/editor of a Leantime task. Requires LEANTIME_API_*.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        taskId: { type: 'number', description: 'Leantime ticket id.' },
+        editorId: { type: 'number', description: 'Assignee/editor user id.' },
+      },
+      required: ['taskId', 'editorId'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'byan_leantime_task_get',
+    description: 'Fetch a single Leantime task by id. Requires LEANTIME_API_*.',
+    inputSchema: {
+      type: 'object',
+      properties: { taskId: { type: 'number', description: 'Leantime ticket id.' } },
+      required: ['taskId'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'byan_leantime_board_get',
+    description: "List a Leantime project's tasks grouped by lifecycle column. Requires LEANTIME_API_*.",
+    inputSchema: {
+      type: 'object',
+      properties: { projectId: { type: 'number', description: 'Leantime project id.' } },
+      required: ['projectId'],
+      additionalProperties: false,
+    },
+  },
+
+  // ─── Styx discovery index (FD-2) ───────────────────────────────────────
+  {
+    name: 'byan_styx_atlas',
+    description:
+      'Styx atlas: a token-bounded map of the WHOLE byan_web ecosystem (projects, nodes, knowledge, workflows, agents) in one call. GET /api/styx/atlas. Returns dense STYX/1 text (one compact line per entity, not JSON-per-item) so you can locate anything cheaply, then descend with byan_styx_get. Aggregates hierarchically (projects + per-project counts + top-k children) and stops at maxTokens. Use this BEFORE list_projects + search when you want a cheap overview or to find an entity. Requires BYAN_API_TOKEN. Scoped to the caller\'s accessible projects (+ global).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        kind: {
+          type: 'string',
+          enum: ['project', 'node', 'knowledge', 'workflow', 'agent'],
+          description: 'Optional: restrict the atlas to one entity kind.',
+        },
+        projectId: {
+          type: 'string',
+          description: 'Optional: zoom into a single project instead of the ecosystem-wide view.',
+        },
+        maxTokens: {
+          type: 'number',
+          description: 'Token budget for the atlas (default 1500, server cap 4000). Out of [100,4000] -> INVALID_FORMAT.',
+        },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'byan_styx_get',
+    description:
+      'Styx get: zoom into one entity and list its DIRECT children only (one level per call, fanout-bounded ~7). GET /api/styx/get. Use the id8 prefix (8 chars) or full uuid shown in the atlas, or "__global__" for the global node. Returns dense STYX/1 text + breadcrumb + footer (cursor for paging beyond fanout). This is the progressive descent companion of byan_styx_atlas. Requires BYAN_API_TOKEN. Entities outside accessible projects resolve as STYX_NOT_FOUND (no cross-tenant existence leak).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'string',
+          description: 'Entity id: id8 prefix, full uuid, or "__global__".',
+        },
+        fanout: {
+          type: 'number',
+          description: 'Number of direct children to return (default 7, cap 15).',
+        },
+        cursor: {
+          type: 'string',
+          description: 'Opaque pagination cursor returned in a previous footer to fetch the next page of children.',
+        },
+      },
+      required: ['id'],
+      additionalProperties: false,
+    },
+  },
+
+  // ─── Google Docs publish (service account, headless) ──────────────────
+  // byan-owned, durable publishing : a service-account JWT (no OAuth, no 7-day
+  // expiry) creates a branded Google Doc and returns its URL. Branding via a
+  // template (GDOC_TEMPLATE_ID) or the AcadeNice palette programmatically.
+  {
+    name: 'byan_publish',
+    description:
+      'Publish a branded Google Doc from content via a byan-owned SERVICE ACCOUNT (headless, durable, no OAuth). Copies a branded template when GDOC_TEMPLATE_ID is set (logo+palette in the template), else builds a programmatic doc branded by the AcadeNice palette. Returns the Doc URL; optionally shares it. Needs GOOGLE_APPLICATION_CREDENTIALS (SA key path). Degrades gracefully (ok:false + reason) when unconfigured. NOT remote-safe (network+auth).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'Document title (required).' },
+        sections: {
+          type: 'array',
+          description: 'Ordered sections of the document.',
+          items: {
+            type: 'object',
+            properties: {
+              heading: { type: 'string' },
+              body: { type: 'string' },
+            },
+            additionalProperties: false,
+          },
+        },
+        resources: {
+          type: 'array',
+          description: 'Resource links rendered at the end.',
+          items: {
+            type: 'object',
+            properties: { label: { type: 'string' }, url: { type: 'string' } },
+            additionalProperties: false,
+          },
+        },
+        fields: {
+          type: 'object',
+          description: 'Extra {{KEY}} placeholder values for template mode.',
+        },
+        templateId: { type: 'string', description: 'Override GDOC_TEMPLATE_ID for this call.' },
+        shareWith: { type: 'string', description: 'Email address to share the Doc with.' },
+        role: {
+          type: 'string',
+          enum: ['reader', 'commenter', 'writer'],
+          description: 'Share role (default reader).',
+        },
+      },
+      required: ['title'],
+      additionalProperties: false,
+    },
+  },
 ];
 
-const server = new Server(
-  { name: 'byan-mcp', version: '0.1.0' },
-  { capabilities: { tools: {} } }
-);
+// Remote-safe MVP allowlist: the ONLY tools exposed on the remote Org Connector
+// (server-http.js sets remoteOnly:true). All are read-only and byan_web-backed
+// (already user-scoped server-side via the per-request token) with ZERO local
+// filesystem dependency, so they are safe on a shared multi-tenant host. Every
+// fs-local / stateful / write / import tool is excluded and stays stdio-only.
+// The byan-lint-remote-safe check enforces that nothing fs-bound leaks in here.
+const REMOTE_SAFE_TOOLS = new Set([
+  'byan_ping',
+  'byan_list_projects',
+  'byan_api_projects_get',
+  'byan_api_workflows_list',
+  'byan_api_workflows_get',
+  'byan_api_workflow_runs_list',
+  'byan_api_workflow_runs_get',
+  'byan_api_knowledge_list',
+  'byan_api_knowledge_get',
+  'byan_api_knowledge_retrieve',
+  'byan_api_memory_list',
+  'byan_api_memory_search',
+  'byan_api_custom_agents_list',
+  'byan_api_custom_agents_get',
+  'byan_api_sessions_list',
+  'byan_api_sessions_get',
+  'byan_api_chat_conversations_list',
+  'byan_api_chat_messages_list',
+  'byan_api_search',
+  'byan_styx_atlas',
+  'byan_styx_get',
+]);
 
-server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
+// Resolve the effective byan_web token for a server instance. On the remote
+// transport (remoteOnly) the identity is the per-request token ONLY — it never
+// falls back to the host env token, so a no-header remote request resolves to
+// NO identity (the tool degrades with its requireToken error) instead of
+// silently borrowing the host's token. The local stdio path keeps the env
+// token as the single-developer fallback.
+export function resolveCallerToken({ token, remoteOnly, envToken }) {
+  if (remoteOnly) return token || undefined;
+  return token || envToken || undefined;
+}
 
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
+// Build a fresh MCP Server with all tools + handlers registered, WITHOUT
+// connecting any transport. The stdio entrypoint (bottom of this file) and the
+// remote HTTP entrypoint (server-http.js) both call this factory, so the tool
+// surface stays single-sourced across transports. A fresh instance per call
+// keeps stateless HTTP requests from sharing in-process server state.
+export function createByanServer({ token, remoteOnly = false } = {}) {
+  // Per-request identity. `token` is the caller's token on the remote HTTP
+  // transport; it falls back to the env token for the local stdio path. Every
+  // tool handler below calls apiRequest / authHeaders / requireToken and reads
+  // BYAN_API_TOKEN — all of which resolve to THESE per-request bindings by
+  // lexical shadowing, so the ~70 call sites need no change and two concurrent
+  // callers on a shared connector never share an identity (GH#44980).
+  const BYAN_API_TOKEN = resolveCallerToken({ token, remoteOnly, envToken: ENV_API_TOKEN });
+  const authHeaders = () => authHeadersFor(BYAN_API_TOKEN);
+  const requireToken = () => requireTokenFor(BYAN_API_TOKEN);
+  const apiRequest = (path, options) => apiRequestFor(path, options, BYAN_API_TOKEN);
+
+  const server = new Server(
+    { name: 'byan-mcp', version: '0.1.0' },
+    { capabilities: { tools: {} } }
+  );
+
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({
+    tools: remoteOnly ? tools.filter((t) => REMOTE_SAFE_TOOLS.has(t.name)) : tools,
+  }));
+
+  server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args = {} } = request.params;
 
   try {
+    // The remote connector exposes ONLY the read-only MVP allowlist. A call to
+    // any other tool over the remote transport is refused as a per-tool error
+    // (normalized to { isError } by the catch below) — never a 500, never run.
+    if (remoteOnly && !REMOTE_SAFE_TOOLS.has(name)) {
+      throw new Error(
+        `Tool '${name}' is not available on the remote BYAN connector (read-only MVP surface).`
+      );
+    }
     if (name === 'byan_ping') {
       const t0 = Date.now();
       const body = await apiRequest('/api/health');
@@ -994,19 +1569,28 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         throw new Error('BYAN_API_TOKEN env var is required for this tool.');
       }
       // Always upload files payload — works for both localhost and remote API.
-      // The API still accepts { path } for backward compat if caller insists,
-      // but the MCP client has no reason to use it (we can always read locally).
+      // Server contract (post FD api-import-project-files-payload-merge):
+      //   { files, projectId? }              -> attach to existing project
+      //   { files, projectMeta: { name, type } } -> create new project
       const { files } = await buildFilesPayload(args.path, {
         ...(args.maxFiles ? { maxFiles: args.maxFiles } : {}),
         ...(args.maxBytes ? { maxBytes: args.maxBytes } : {}),
       });
+      const payload = { files };
+      if (args.projectId) {
+        payload.projectId = args.projectId;
+      } else if (args.name || args.type) {
+        payload.projectMeta = {
+          ...(args.name ? { name: args.name } : {}),
+          type: args.type || 'dev',
+        };
+      }
+      if (args.autoCreateNodes === true) {
+        payload.autoCreateNodes = true;
+      }
       const body = await apiRequest('/api/import/project', {
         method: 'POST',
-        body: JSON.stringify({
-          files,
-          ...(args.name ? { name: args.name } : {}),
-          ...(args.type ? { type: args.type } : {}),
-        }),
+        body: JSON.stringify(payload),
       });
       return {
         content: [{ type: 'text', text: JSON.stringify(body.data || body, null, 2) }],
@@ -1014,7 +1598,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     if (name === 'byan_dispatch') {
-      const result = dispatch(args);
+      const result = Array.isArray(args.leaves) ? dispatchBatch(args.leaves) : dispatch(args);
       return {
         content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
       };
@@ -1066,35 +1650,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
     }
 
-    if (name === 'byan_copilot_sessions') {
-      const result = listSessions({
-        limit: args.limit,
-        sinceIso: args.sinceIso,
-        cwdFilter: args.cwdFilter,
-      });
-      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
-    }
-
-    if (name === 'byan_copilot_session_events') {
-      const result = readSessionEvents({
-        sessionId: args.sessionId,
-        types: args.types,
-        limit: args.limit,
-      });
-      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
-    }
-
-    if (name === 'byan_copilot_search') {
-      const result = searchSessions({
-        query: args.query,
-        types: args.types,
-        limit: args.limit,
-      });
-      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
-    }
-
     if (name === 'byan_fd_start') {
-      const state = fdStart({ featureName: args.featureName, force: args.force });
+      const state = fdStart({ featureName: args.featureName, force: args.force, strict: args.strict });
       return { content: [{ type: 'text', text: JSON.stringify(state, null, 2) }] };
     }
 
@@ -1116,6 +1673,153 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (name === 'byan_fd_abort') {
       const state = fdAbort({ reason: args.reason });
       return { content: [{ type: 'text', text: JSON.stringify(state, null, 2) }] };
+    }
+
+    if (name === 'byan_suitability_record') {
+      const r = suitabilityRecord({
+        model: args.model,
+        leafId: args.leafId,
+        success: args.success,
+        source: args.source,
+      });
+      return { content: [{ type: 'text', text: JSON.stringify(r, null, 2) }] };
+    }
+
+    if (name === 'byan_suitability_report') {
+      const rows = suitabilityReport({ model: args.model });
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({ ledger: suitabilityLedgerPath(), advisory: true, rows }, null, 2),
+          },
+        ],
+      };
+    }
+
+    if (name === 'byan_insight_digest') {
+      const rootDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const digest = harvestInsights({ rootDir });
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({ gated: true, digest, render: renderInsightDigest(digest) }, null, 2),
+          },
+        ],
+      };
+    }
+
+    if (name === 'byan_outcome_log') {
+      const line = validateForLog(args);
+      if (!line) {
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ logged: false, reason: 'invalid_outcome' }) }],
+        };
+      }
+      const rootDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      const ok = appendOutcome(line, { rootDir });
+      return {
+        content: [{ type: 'text', text: JSON.stringify({ logged: ok, outcome: line }) }],
+      };
+    }
+
+    if (name === 'byan_strict_lock_scope') {
+      const r = strictLockScope({
+        scopeText: args.scopeText,
+        acceptanceCriteria: args.acceptanceCriteria,
+        allowedPaths: args.allowedPaths,
+        domain: args.domain,
+        force: args.force,
+      });
+      const st = strictGetStatus();
+      // Attach to a byan_web project: explicit arg, else env, else resolve from
+      // the active FD project_context (best-effort; null degrades to user-scoped).
+      let projectId = args.projectId || process.env.BYAN_PROJECT_ID || null;
+      let featureName = args.featureName || null;
+      if (strictSyncEnabled()) {
+        try {
+          const fd = fdStatus();
+          const pc = fd && fd.project_context;
+          if (pc) {
+            if (!projectId && (pc.slug || pc.name)) {
+              projectId = await strictResolveProjectId({ slug: pc.slug, name: pc.name });
+            }
+            if (!featureName && fd.feature_name) featureName = fd.feature_name;
+          }
+        } catch {
+          // FD context unavailable — stay user-scoped.
+        }
+      }
+      const sync = await strictPushLock({
+        sessionId: st.strict_session_id,
+        scopeLock: r,
+        projectId,
+        featureName,
+      });
+      return { content: [{ type: 'text', text: JSON.stringify({ ...r, project_id: projectId, sync: syncResult(sync) }, null, 2) }] };
+    }
+
+    if (name === 'byan_strict_self_verify') {
+      const r = strictSelfVerify({
+        verdict: args.verdict,
+        findings: args.findings || [],
+      });
+      const st = strictGetStatus();
+      const lastPass = (st.passes || [])[st.passes.length - 1];
+      const sync = await strictPushVerify({ sessionId: st.strict_session_id, pass: lastPass });
+      return { content: [{ type: 'text', text: JSON.stringify({ ...r, sync: syncResult(sync) }, null, 2) }] };
+    }
+
+    if (name === 'byan_strict_complete') {
+      const r = strictComplete();
+      const st = strictGetStatus();
+      // C3 learning loop: a completed strict session with an EXPLICIT ELO domain
+      // is a VALIDATED outcome. eloOutcomeForStrictComplete builds the line (the
+      // SAME helper the test exercises, so handler and test cannot drift); we
+      // append it to the buffer drain-advisory drains. The domain is the user's
+      // explicit lock_scope input, never inferred. Best-effort: a feed failure
+      // must not break completion.
+      try {
+        const eloLine = eloOutcomeForStrictComplete(r);
+        if (eloLine) appendOutcome(eloLine, { rootDir: process.env.CLAUDE_PROJECT_DIR || process.cwd() });
+      } catch {
+        // the learning feed must not break completion.
+      }
+      const sync = await strictPushComplete({
+        sessionId: st.strict_session_id,
+        auditToken: r.audit_token,
+        completedAt: r.completed_at,
+      });
+      return { content: [{ type: 'text', text: JSON.stringify({ ...r, sync: syncResult(sync) }, null, 2) }] };
+    }
+
+    if (name === 'byan_strict_status') {
+      const local = strictGetStatus();
+      // The API is the authority. When a session exists and the API answers,
+      // surface its record; otherwise fall back to the local mirror (offline).
+      let authority = 'local';
+      let r = local;
+      if (local.strict_session_id && strictSyncEnabled()) {
+        const remote = await strictFetchSession({ sessionId: local.strict_session_id });
+        if (remote.ok && remote.data) {
+          authority = 'api';
+          r = { ...local, api: remote.data };
+        }
+      }
+      return { content: [{ type: 'text', text: JSON.stringify({ ...r, authority }, null, 2) }] };
+    }
+
+    if (name === 'byan_strict_abort') {
+      const st = strictGetStatus();
+      const r = strictAbort({ reason: args.reason });
+      const sync = await strictPushAbort({ sessionId: st.strict_session_id, reason: args.reason });
+      return { content: [{ type: 'text', text: JSON.stringify({ ...r, sync: syncResult(sync) }, null, 2) }] };
+    }
+
+    if (name === 'byan_strict_suggest') {
+      const r = strictDetectActivation({ text: args.text });
+      return { content: [{ type: 'text', text: JSON.stringify(r, null, 2) }] };
     }
 
     if (name === 'byan_review_request') {
@@ -1279,38 +1983,65 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     if (name === 'byan_api_knowledge_list') {
       requireToken();
+      if (!args.projectId) throw new Error('projectId is required (RBAC: knowledge is project-scoped).');
       const qs = buildQuery({
-        project_id: args.projectId,
         category: args.category,
         tags: args.tags,
-        limit: args.limit,
+        nodeId: args.nodeId,
       });
-      const body = await apiRequest(`/api/knowledge${qs}`);
+      const body = await apiRequest(
+        `/api/projects/${encodeURIComponent(args.projectId)}/knowledge${qs}`
+      );
       return { content: [{ type: 'text', text: JSON.stringify(body, null, 2) }] };
     }
 
     if (name === 'byan_api_knowledge_get') {
       requireToken();
-      const body = await apiRequest(`/api/knowledge/${encodeURIComponent(args.id)}`);
+      if (!args.projectId) throw new Error('projectId is required (RBAC: knowledge is project-scoped).');
+      const body = await apiRequest(
+        `/api/projects/${encodeURIComponent(args.projectId)}/knowledge/${encodeURIComponent(args.id)}`
+      );
+      return { content: [{ type: 'text', text: JSON.stringify(body, null, 2) }] };
+    }
+
+    if (name === 'byan_api_knowledge_retrieve') {
+      requireToken();
+      if (!args.projectId) throw new Error('projectId is required (RBAC: knowledge is project-scoped).');
+      if (!args.q || String(args.q).trim() === '') throw new Error('q (query) is required.');
+      const qs = buildQuery({
+        q: args.q,
+        k: args.k,
+        tokenBudget: args.tokenBudget,
+      });
+      const body = await apiRequest(
+        `/api/projects/${encodeURIComponent(args.projectId)}/knowledge/retrieve${qs}`
+      );
       return { content: [{ type: 'text', text: JSON.stringify(body, null, 2) }] };
     }
 
     if (name === 'byan_api_memory_list') {
       requireToken();
+      if (!args.projectId) throw new Error('projectId is required (RBAC: memory is project-scoped).');
       const qs = buildQuery({
-        project_id: args.projectId,
         category: args.category,
-        type: args.type,
+        layer: args.layer,
+        nodeId: args.nodeId,
+        sessionId: args.sessionId,
+        includePinned: args.includePinned,
         limit: args.limit,
       });
-      const body = await apiRequest(`/api/memory${qs}`);
+      const body = await apiRequest(
+        `/api/projects/${encodeURIComponent(args.projectId)}/memory${qs}`
+      );
       return { content: [{ type: 'text', text: JSON.stringify(body, null, 2) }] };
     }
 
     if (name === 'byan_api_memory_search') {
       requireToken();
-      const qs = buildQuery({ q: args.q });
-      const body = await apiRequest(`/api/memory/search${qs}`);
+      // /api/memory/search is decommissioned; full-text search routes through /api/search
+      // which covers knowledge + nodes across projects the caller can access.
+      const qs = buildQuery({ q: args.q, project_id: args.projectId });
+      const body = await apiRequest(`/api/search${qs}`);
       return { content: [{ type: 'text', text: JSON.stringify(body, null, 2) }] };
     }
 
@@ -1339,21 +2070,23 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     if (name === 'byan_api_sessions_list') {
       requireToken();
-      const qs = buildQuery({ project_id: args.projectId });
-      const body = await apiRequest(`/api/sessions${qs}`);
+      if (!args.projectId) throw new Error('projectId is required (RBAC: sessions are project-scoped).');
+      const qs = buildQuery({
+        userId: args.userId,
+        cliSource: args.cliSource,
+        limit: args.limit,
+      });
+      const body = await apiRequest(
+        `/api/projects/${encodeURIComponent(args.projectId)}/sessions${qs}`
+      );
       return { content: [{ type: 'text', text: JSON.stringify(body, null, 2) }] };
     }
 
     if (name === 'byan_api_sessions_get') {
       requireToken();
-      const body = await apiRequest(`/api/sessions/${encodeURIComponent(args.id)}`);
-      return { content: [{ type: 'text', text: JSON.stringify(body, null, 2) }] };
-    }
-
-    if (name === 'byan_api_sessions_history') {
-      requireToken();
+      if (!args.projectId) throw new Error('projectId is required (RBAC: sessions are project-scoped).');
       const body = await apiRequest(
-        `/api/sessions/${encodeURIComponent(args.id)}/history`
+        `/api/projects/${encodeURIComponent(args.projectId)}/sessions/${encodeURIComponent(args.id)}`
       );
       return { content: [{ type: 'text', text: JSON.stringify(body, null, 2) }] };
     }
@@ -1397,6 +2130,30 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return { content: [{ type: 'text', text: JSON.stringify(body, null, 2) }] };
     }
 
+    if (name === 'byan_styx_atlas') {
+      requireToken();
+      const qs = buildQuery({
+        kind: args.kind,
+        projectId: args.projectId,
+        maxTokens: args.maxTokens,
+      });
+      const body = await apiRequest(`/api/styx/atlas${qs}`);
+      // body.data is the dense STYX/1 text -- return it verbatim (the whole point
+      // of styx is token economy ; do not re-wrap each line as JSON).
+      return { content: [{ type: 'text', text: (body && body.data) || JSON.stringify(body, null, 2) }] };
+    }
+
+    if (name === 'byan_styx_get') {
+      requireToken();
+      const qs = buildQuery({
+        id: args.id,
+        fanout: args.fanout,
+        cursor: args.cursor,
+      });
+      const body = await apiRequest(`/api/styx/get${qs}`);
+      return { content: [{ type: 'text', text: (body && body.data) || JSON.stringify(body, null, 2) }] };
+    }
+
     if (name === 'byan_api_import_scan') {
       requireToken();
       // Build files payload from client filesystem — works for remote byan_web.
@@ -1425,6 +2182,110 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return { content: [{ type: 'text', text: JSON.stringify(body, null, 2) }] };
     }
 
+    if (name === 'byan_update_check') {
+      const status = await checkForUpdate(PROJECT_ROOT);
+      return { content: [{ type: 'text', text: JSON.stringify(status, null, 2) }] };
+    }
+
+    if (name === 'byan_update_apply') {
+      const instructions = formatApplyInstructions({
+        preview: args.preview === true,
+        force: args.force === true,
+      });
+      return { content: [{ type: 'text', text: JSON.stringify(instructions, null, 2) }] };
+    }
+
+    // ─── Google Docs publish (service account, headless) ──────────────
+    if (name === 'byan_publish') {
+      const publisher = createGdocPublisher();
+      const result = await publisher.publish(
+        {
+          title: args.title,
+          sections: args.sections,
+          resources: args.resources,
+          fields: args.fields,
+        },
+        {
+          templateId: args.templateId,
+          shareWith: args.shareWith,
+          role: args.role,
+        }
+      );
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+    }
+
+    // ─── Leantime tools ───────────────────────────────────────────────
+    if (name === 'byan_leantime_ping') {
+      const status = {
+        api_url: process.env.LEANTIME_API_URL || null,
+        token_configured: Boolean(process.env.LEANTIME_API_TOKEN),
+        assign_user_configured: Boolean(process.env.LEANTIME_ASSIGN_USER_ID),
+        enabled: leantimeEnabled(),
+      };
+      if (status.enabled) {
+        const probe = await leantimeRpc(LEANTIME_METHODS.getAllProjects, {});
+        status.reachable = probe.ok;
+        if (!probe.ok) status.reason = probe.reason;
+        if (probe.hint) status.hint = probe.hint;
+      }
+      return { content: [{ type: 'text', text: JSON.stringify(status, null, 2) }] };
+    }
+
+    if (name === 'byan_leantime_project_ensure') {
+      requireLeantime();
+      const r = await leantimeEnsureProject({
+        name: args.name,
+        slug: args.slug,
+        clientId: args.clientId,
+        details: args.details,
+      });
+      return { content: [{ type: 'text', text: JSON.stringify(r, null, 2) }] };
+    }
+
+    if (name === 'byan_leantime_task_create') {
+      requireLeantime();
+      const r = await leantimeCreateTask({
+        projectId: args.projectId,
+        headline: args.headline,
+        description: args.description,
+        status: args.status,
+        priority: args.priority,
+        editorId: args.editorId,
+        tags: args.tags,
+        ...(args.type !== undefined ? { type: args.type } : {}),
+      });
+      return { content: [{ type: 'text', text: JSON.stringify(r, null, 2) }] };
+    }
+
+    if (name === 'byan_leantime_task_move') {
+      requireLeantime();
+      const r = await leantimeMoveTask({
+        taskId: args.taskId,
+        projectId: args.projectId,
+        column: args.column,
+        status: args.status,
+      });
+      return { content: [{ type: 'text', text: JSON.stringify(r, null, 2) }] };
+    }
+
+    if (name === 'byan_leantime_task_assign') {
+      requireLeantime();
+      const r = await leantimeAssignTask({ taskId: args.taskId, editorId: args.editorId });
+      return { content: [{ type: 'text', text: JSON.stringify(r, null, 2) }] };
+    }
+
+    if (name === 'byan_leantime_task_get') {
+      requireLeantime();
+      const r = await leantimeGetTask({ taskId: args.taskId });
+      return { content: [{ type: 'text', text: JSON.stringify(r, null, 2) }] };
+    }
+
+    if (name === 'byan_leantime_board_get') {
+      requireLeantime();
+      const r = await leantimeGetBoard({ projectId: args.projectId });
+      return { content: [{ type: 'text', text: JSON.stringify(r, null, 2) }] };
+    }
+
     throw new Error(`Unknown tool: ${name}`);
   } catch (err) {
     return {
@@ -1432,9 +2293,22 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       content: [{ type: 'text', text: `Error: ${err.message}` }],
     };
   }
-});
+  });
 
-const transport = new StdioServerTransport();
-await server.connect(transport);
+  return server;
+}
 
-export { buildFilesPayload };
+// Stdio entrypoint guard: connect stdio ONLY when this file is the process
+// entrypoint (or explicitly forced). Importing the module (tests, the HTTP
+// entrypoint server-http.js) must NOT grab stdio as a side effect.
+const isStdioEntrypoint =
+  process.env.BYAN_MCP_TRANSPORT === 'stdio' ||
+  (process.argv[1] &&
+    nodePath.resolve(process.argv[1]) === nodePath.resolve(__filename));
+
+if (isStdioEntrypoint) {
+  const transport = new StdioServerTransport();
+  await createByanServer().connect(transport);
+}
+
+export { buildFilesPayload, REMOTE_SAFE_TOOLS, authHeadersFor, BYAN_API_URL };

@@ -1,4 +1,7 @@
 .env
+.env.prod
+docker-compose.prod.yml
+node_modules/
 docker/php/tmp/
 mariadb_data/
 *.log
