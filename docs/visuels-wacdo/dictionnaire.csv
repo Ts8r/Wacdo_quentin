@@ -1,0 +1,88 @@
+﻿Code,Type,Nature,Description,Remarques et contraintes
+ROLES,,,,
+id_role,N(2),EI,Identifiant du rôle,PK
+code_role,X(20),EI,Code court du rôle,"Unique (ex: CLIENT, EMPLOYE, MANAGER, ADMIN)"
+libelle,X(30),EI,Libellé du rôle,"client, employé, manager, admin"
+,,,,
+UTILISATEURS,,,,
+id_user,N(6),EI,Identifiant utilisateur,PK
+nom,X(50),EI,Nom de l’utilisateur,Not null
+prenom,X(50),EI,Prénom de l’utilisateur,Not null
+email,X(100),EI,Adresse email,Not null Unique
+mot_de_passe,X(255),EI,MDP chiffré,Hashé
+num_tel,X(15),EI,Numéro de tel,"Optionnel, format E.164 conseillé"
+id_role,N(2),EI,Rôle de l’utilisateur,FK ROLE
+,,,,
+CATEGORIES,,,,
+id_cat,N(3),EI,Identifiant catégorie,PK
+type,X(50),EI,Nom/type de catégorie,"Not null (ex: Burger, Boisson, Dessert)"
+description,X(255),EI,Description de la catégorie,Optionnel
+,,,,
+PRODUITS,,,,
+id_produit,N(6),EI,Identifiant produit,PK
+nom,X(80),EI,Nom du produit,"Big Mac, Nuggets,…"
+description,X(255),EI,Description produit,Optionnel
+prix_unitaire,"N(5,2)",EI,Prix unitaire en euros,Not null
+disponibilite,N(1),EI,Disponibilité produit,"CHECK (disponibilite IN (0,1))"
+quantite,N(3),EI,Stock produit,≥ 0
+,,,,
+MENUS,,,,
+id_menu,N(4),EI,Identifiant menu,PK
+nom,X(80),EI,Nom du menu,Menu Best Of Big Mac
+prix,"N(5,2)",EI,Prix du menu en euros,≥ 0.1
+disponibilite,N(1),EI,Disponibilité menu,"CHECK (disponibilite IN (0,1))"
+,,,,
+COMMANDES,,,,
+id_cmd,N(7),EI,Identifiant commande,PK
+numero_ticket,X(20),EI,Numéro de ticket,Unique
+date_cmd,DateTime,EI,Date et heure commande,Not null
+id_user,N(6),EI,Client ayant commandé,"FK UTILISATEUR, NULL autorisé si commande anonyme"
+id_statut,N(2),EI,Identifiant du statut de la commande,"FK STATUTS_COMMANDE (id_statut), Not Null"
+id_canal,N(2),EI,Identifiant du canal de commande,"FK CANAUX (id_canal), Not Null"
+,,,,
+INGREDIENTS,,,,
+id_ingredient,N(6),EI,Identifiant ingrédient,PK
+nom,X(80),EI,Nom ingrédient,"Not null, idéalement Unique"
+cout_unitaire,"N(5,2)",EI,Coût / prix ingrédient,≥ 0
+quantite,N(6),EI,Stock ingrédient,≥ 0
+,,,,
+COMMANDE_PRODUITS,,,,
+id_cmd,N(7),EI,Identifiant de la commande,"PK, FK COMMANDES"
+id_produit,N(6),EI,Identifiant du produit commandé,"PK, FK PRODUITS"
+quantite,N(3),EI,Quantité de produit commandée,≥ 1
+prix_unitaire,"N(5,2)",EI,Prix unitaire du produit au moment de la commande,≥ 0
+prix_ligne,"N(7,2)",EI,Montant total de la ligne (quantite × prix_unitaire),≥ 0
+,,,,
+COMMANDE_MENUS,,,,
+,,,,
+,,,,
+,,,,
+COMMANDE_MENUS,,,,
+id_cmd,N(7),EI,Identifiant de la commande,"PK, FK COMMANDES"
+id_menu,N(4),EI,Identifiant du menu commandé,"PK, FK MENUS"
+quantite,N(3),EI,Quantité de menus commandés,≥ 1
+taille,X(5),EI,"Taille choisie pour le menu (S, M, L si applicable)","CHECK (taille IN ('S','M','L'))"
+prix_unitaire,"N(5,2)",EI,Prix unitaire du menu au moment de la commande,≥ 0
+prix_ligne,"N(7,2)",EI,Montant total de la ligne (quantite × prix_unitaire),≥ 0
+,,,,
+MENU_PRODUITS,,,,
+id_menu,N(4),EI,Identifiant du menu,"PK, FK MENUS"
+id_produit,N(6),EI,Identifiant du produit composant le menu,"PK, FK PRODUITS"
+quantite,N(3),EI,Quantité du produit incluse dans le menu,≥ 1
+,,,,
+INGREDIENTS_PRODUITS,,,,
+id_produit,N(6),EI,Identifiant du produit,"PK, FK PRODUITS"
+id_ingredient,N(6),EI,Identifiant de l’ingrédient utilisé,"PK, FK INGREDIENTS"
+quantite,"N(6,2)",EI,Quantité d’ingrédient nécessaire pour le produit,≥ 1
+,,,,
+STATUTS_COMMANDES,,,,
+id_statut,N(2),EI,Identifiant du statut,PK
+libelle,X(30),EI,Libellé du statut,"Not Null, Unique (ex : en_preparation, prete, servie, annulee)"
+,,,,
+CANAUX,,,,
+id_canal,N(2),EI,Identifiant du canal,PK
+libelle,X(30),EI,Libellé du canal de commande,"Not Null, Unique (borne, caisse, appli, drive)"
+,,,,
+PRODUITS_CATEGORIES,,,,
+id_produit,N(6),EI,Identifiant du produit,"PK, FK PRODUITS "
+id_cat,N(3),EI,Identifiant de la catégorie,"PK, FK CATEGORIES"

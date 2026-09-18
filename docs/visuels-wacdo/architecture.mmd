@@ -1,0 +1,8 @@
+flowchart LR
+    Client[Client] --> Front[Borne HTML CSS JS]
+    Front -.->|Chemins API prets, branchement desactive| API[API PHP]
+    Employe[Employe ou administrateur] --> Back[Back-office]
+    Back -.->|Chemins API prets| API
+    API -.->|Connexion prevue| Repositories[Repositories]
+    Repositories -.->|Connexion prevue| DB[(MariaDB)]
+    Front --> Local[(Donnees locales wacdo/)]

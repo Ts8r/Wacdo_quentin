@@ -1,0 +1,58 @@
+classDiagram
+direction LR
+
+class Database {
+  -PDO pdo
+  +getConnection() PDO
+}
+
+class Produit {
+  +id_produit: int
+  +nom: string
+  +description: string
+  +prix_unitaire: float
+  +disponibilite: bool
+  +quantite: int
+}
+
+class Commande {
+  +id_cmd: int
+  +id_user: int
+  +id_statut: int
+  +id_canal: int
+  +numero_ticket: string
+  +date_cmd: string
+  +total_ttc: float
+}
+
+class ProduitRepository {
+  -PDO pdo
+  +findAll() array
+  +findById(id:int) Produit
+  +create(data:array) int
+  +update(id:int,data:array) bool
+  +delete(id:int) bool
+}
+
+class CommandeRepository {
+  -PDO pdo
+  +findById(id:int) Commande
+  +createCommande(data:array) int
+  +addProduit(idCmd:int,idProduit:int,qty:int,pu:float) bool
+  +updateStatut(idCmd:int,idStatut:int) bool
+}
+
+class CommandeService {
+  -CommandeRepository commandeRepo
+  -ProduitRepository produitRepo
+  +creerCommandeAnonyme(canal:int,lignes:array) int
+  +calculerTotal(lignes:array) float
+  +changerStatut(idCmd:int,idStatut:int) bool
+}
+
+Database --> ProduitRepository
+Database --> CommandeRepository
+ProduitRepository --> Produit
+CommandeRepository --> Commande
+CommandeService --> CommandeRepository
+CommandeService --> ProduitRepository

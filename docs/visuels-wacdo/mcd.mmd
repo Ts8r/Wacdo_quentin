@@ -1,0 +1,118 @@
+erDiagram
+    ROLES ||--o{ UTILISATEURS : attribue
+    UTILISATEURS o|--o{ COMMANDES : passe
+    STATUTS_COMMANDES ||--o{ COMMANDES : definit
+    CANAUX ||--o{ COMMANDES : provient_de
+
+    COMMANDES ||--o{ COMMANDE_PRODUIT : contient
+    PRODUITS ||--o{ COMMANDE_PRODUIT : reference
+
+    COMMANDES ||--o{ COMMANDE_MENU : contient
+    MENUS ||--o{ COMMANDE_MENU : reference
+
+    MENUS ||--o{ MENU_PRODUIT : compose
+    PRODUITS ||--o{ MENU_PRODUIT : inclut
+
+    INGREDIENTS ||--o{ INGREDIENTS_PRODUITS : compose
+    PRODUITS ||--o{ INGREDIENTS_PRODUITS : contient
+
+    PRODUITS ||--o{ PRODUITS_CATEGORIES : classe
+    CATEGORIES ||--o{ PRODUITS_CATEGORIES : regroupe
+
+    ROLES {
+        int id_role PK
+        string code_role UK
+        string libelle
+    }
+
+    UTILISATEURS {
+        int id_user PK
+        int id_role FK
+        string nom
+        string prenom
+        string email UK
+        string mot_de_passe
+        string num_tel
+    }
+
+    STATUTS_COMMANDES {
+        int id_statut PK
+        string libelle UK
+    }
+
+    CANAUX {
+        int id_canal PK
+        string libelle UK
+    }
+
+    COMMANDES {
+        int id_cmd PK
+        int id_user FK
+        int id_statut FK
+        int id_canal FK
+        string numero_ticket UK
+        datetime date_cmd
+    }
+
+    MENUS {
+        int id_menu PK
+        string nom
+        decimal prix
+        bool disponibilite
+    }
+
+    PRODUITS {
+        int id_produit PK
+        string nom
+        string description
+        decimal prix_unitaire
+        bool disponibilite
+        int quantite
+    }
+
+    CATEGORIES {
+        int id_cat PK
+        string type
+        string description
+    }
+
+    INGREDIENTS {
+        int id_ingredient PK
+        string nom UK
+        decimal cout_unitaire
+        decimal quantite
+    }
+
+    COMMANDE_PRODUIT {
+        int id_cmd PK,FK
+        int id_produit PK,FK
+        int quantite
+        decimal prix_unitaire
+        decimal prix_ligne
+    }
+
+    COMMANDE_MENU {
+        int id_cmd PK,FK
+        int id_menu PK,FK
+        int quantite
+        string taille
+        decimal prix_unitaire
+        decimal prix_ligne
+    }
+
+    MENU_PRODUIT {
+        int id_menu PK,FK
+        int id_produit PK,FK
+        int quantite
+    }
+
+    INGREDIENTS_PRODUITS {
+        int id_ingredient PK,FK
+        int id_produit PK,FK
+        decimal quantite
+    }
+
+    PRODUITS_CATEGORIES {
+        int id_produit PK,FK
+        int id_cat PK,FK
+    }

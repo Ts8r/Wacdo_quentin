@@ -1,0 +1,12 @@
+flowchart TD
+    A[Client ouvre la borne] --> B[Catalogue local affiche]
+    B --> C[Choix des produits et menus]
+    C --> D[Panier et total local]
+    D --> E{Validation du panier}
+    E -->|Vide| F[Message d'erreur]
+    E -->|Valide| G[Confirmation locale simulee]
+    G --> H[Ticket de demonstration]
+    G -.->|Evolution prevue| I[POST /api/commandes]
+    I -.-> J[Commande en_attente]
+    J -.-> K[Preparation]
+    K -.-> L[Prete puis servie]
