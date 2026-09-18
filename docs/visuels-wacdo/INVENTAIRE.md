@@ -12,6 +12,10 @@
 - `classes-source.excalidraw` : source editable du diagramme de classes
 - `architecture.mmd` : schema d'architecture
 - `parcours-commande.mmd` : parcours et cycle de vie d'une commande
+- `benchmark-choix-techniques.md` : comparatifs PHP, bases de donnees, front,
+	Docker et reverse proxy
+- `chronologie-et-vocabulaire-wacdo.md` : ordre de construction, dates Git et
+	glossaire technique et metier
 
 ## Captures manquantes
 
