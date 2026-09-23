@@ -61,7 +61,7 @@ const CHEMINS_API = {
     catalogue: `${API_BASE}/catalogue`,
     commandes: `${API_BASE}/commandes`
 };
-const API_ACTIVE = true;
+const API_ACTIVE = false;
 const SOURCE_DONNEES = API_ACTIVE ? "api" : "static";
 const URL_DONNEES = {
     static: "/wacdo/produits.json",
@@ -556,6 +556,13 @@ async function inscrireClient(evenement) {
 async function authentifierClient(chemin, formulaire) {
     const message = document.querySelector("#message-auth");
     const donnees = Object.fromEntries(formulaire.entries());
+
+    if (!API_ACTIVE) {
+        etat.utilisateur = { nom: donnees.nom || donnees.email || "Client test" };
+        fermerModales();
+        await validerCommande();
+        return;
+    }
 
     try {
         const reponse = await fetch(`${API_BASE}${chemin}`, {
