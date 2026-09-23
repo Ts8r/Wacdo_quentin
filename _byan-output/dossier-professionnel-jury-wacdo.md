@@ -260,7 +260,7 @@ Les controleurs gerent la requete et la reponse. Les repositories regroupent les
 
 ### 7.1 Fonctionnement
 
-Le fichier principal est `assets/js/borne.js`. Il utilise les chemins `GET /api/catalogue` et `POST /api/commandes`. Avant la validation, le client peut se connecter, creer un compte ou continuer sans compte. Dans les deux premiers cas, la session client est associee a la commande par le serveur ; dans le dernier cas, `COMMANDES.id_user` reste nul.
+Le fichier principal est `assets/js/borne.js`. Dans la version presentee, la borne fonctionne en mode statique : le catalogue est lu depuis `/wacdo/produits.json` et la commande est simulee localement (ticket de test), sans appel a `GET /api/catalogue` ni `POST /api/commandes`. Les routes serveur de connexion et creation de compte client (`/api/auth/client-login`, `/api/auth/register`) existent et sont protegees, mais ne sont pas branchees sur ce front ; la commande reste donc anonyme et `COMMANDES.id_user` reste nul.
 
 Le parcours principal est :
 
@@ -363,7 +363,7 @@ Les roles prevus sont :
 - `MANAGER` ;
 - `ADMIN`.
 
-Le role `CLIENT` est utilise par la borne. Le client peut commander sans compte, se connecter avec un compte existant ou creer un compte. Les actions de gestion restent protegees par les roles `EMPLOYE`, `MANAGER` et `ADMIN`.
+Le role `CLIENT` est prevu pour la borne, avec des routes de connexion et de creation de compte deja implementees cote serveur. Dans la version presentee, le front n'appelle pas encore ces routes et la commande reste anonyme. Les actions de gestion restent protegees par les roles `EMPLOYE`, `MANAGER` et `ADMIN`.
 
 Cette distinction permet de repondre a deux besoins differents : faciliter le parcours du client et proteger les donnees de gestion.
 
@@ -562,7 +562,7 @@ Les tests automatises ne couvrent pas encore tous les parcours et toutes les err
 
 ### Pourquoi autoriser une commande sans compte ?
 
-> Le client peut commander sans compte, se connecter avec un compte client existant ou en creer un avant de valider. Le compte est facultatif et la commande anonyme reste disponible. Les utilisateurs internes ont une connexion separee pour acceder au back-office.
+> Dans la version presentee, la commande est toujours anonyme cote front : la borne ne demande ni connexion ni creation de compte. Les routes de connexion et de creation de compte client existent deja cote serveur pour une prochaine iteration. Les utilisateurs internes ont une connexion separee pour acceder au back-office.
 
 ### Que peut-on ameliorer ?
 
@@ -595,7 +595,7 @@ Les tests automatises ne couvrent pas encore tous les parcours et toutes les err
 
 ## 16. Conclusion
 
-WACDO est une application complete autour d'un parcours de commande : une borne client, un front vanilla, une API PHP, un back-office, une base MariaDB et une infrastructure Dockerisee. Dans la version presentee, la borne utilise l'API et propose trois parcours : commande anonyme, connexion client ou creation de compte client.
+WACDO est une application complete autour d'un parcours de commande : une borne client, un front vanilla, une API PHP, un back-office, une base MariaDB et une infrastructure Dockerisee. Dans la version presentee, la borne fonctionne en mode statique et propose une commande anonyme ; le parcours connexion/creation de compte client est deja code cote serveur mais pas encore branche au front.
 
 Les choix techniques repondent a des besoins identifies :
 

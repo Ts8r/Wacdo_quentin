@@ -9,8 +9,8 @@ Important :
 - Ne pas inclure de vrais identifiants dans la présentation.
 - Présenter le MVP comme terminé sur son périmètre défini, tout en distinguant les évolutions hors périmètre.
 - Dire que le backend est fonctionnel en MVP.
-- Dire que le front actuel est en HTML/CSS/JavaScript vanilla et que le parcours client est relie a l'API.
-- Dire que la borne propose la connexion client, la creation de compte et la commande anonyme.
+- Dire que le front actuel est en HTML/CSS/JavaScript vanilla et fonctionne en mode statique (donnees locales, commande simulee), sans appel a l'API dans cette version.
+- Dire que la commande est anonyme dans le front actuel, et que les routes de connexion et creation de compte client existent deja cote serveur pour une prochaine iteration.
 - Présenter la partie Framework comme une déclinaison front-end complémentaire.
 
 ### Nom Du Projet
@@ -72,9 +72,8 @@ Permettre à un client de passer une commande depuis une borne, puis permettre �
 - Gestion des statuts de commande.
 - Débit du stock ingrédient lors de la création d'une commande.
 - Recrédit du stock en cas d'annulation.
-- Front borne connecté à l'API.
-- Connexion client facultative depuis la borne.
-- Création de compte client facultative depuis la borne.
+- Routes serveur de connexion et de création de compte client prêtes (non branchées sur le front actuel).
+- Front borne fonctionnant en mode statique (données locales, commande simulée).
 - Commande anonyme conservée avec `id_user` nul.
 
 ### Pas Encore Totalement Terminé
@@ -115,7 +114,7 @@ Objectif de la partie Framework :
 
 Formulation orale possible :
 
-> Le front de la borne est réalisé en HTML, CSS et JavaScript vanilla, avec un parcours client relié à l'API et trois choix avant validation : se connecter, créer un compte ou continuer sans compte. La partie Framework montre comment organiser cette même interface avec des composants réutilisables et un état plus structuré.
+> Le front de la borne est réalisé en HTML, CSS et JavaScript vanilla. Dans cette version, il fonctionne en mode statique et la commande reste anonyme ; les routes de connexion et de création de compte client existent déjà côté serveur pour une prochaine itération. La partie Framework montre comment organiser cette même interface avec des composants réutilisables et un état plus structuré.
 
 ### Backend
 
@@ -863,7 +862,7 @@ Phrase :
 Arguments :
 
 - borne interactive ;
-- catalogue dynamique ;
+- catalogue dynamique côté API ;
 - back-office connecté ;
 - images stockées en base ;
 - partie Framework front organisée en composants ;
@@ -871,7 +870,7 @@ Arguments :
 
 Phrase :
 
-> La partie Framework montre une organisation front-end par composants, complémentaire de la borne vanilla déjà reliée à l'API.
+> La partie Framework montre une organisation front-end par composants, complémentaire de la borne vanilla, dont le branchement à l'API est prévu en évolution.
 
 ### C - Confort
 
@@ -928,7 +927,7 @@ Phrase :
 - Stock ingrédients.
 - Commandes avec statuts.
 - Back-office utilisable.
-- Front connecté à l'API.
+- Front en mode statique dans la version présentée, API prête côté serveur.
 - Partie Framework présentée comme déclinaison front-end par composants.
 
 ---
@@ -1136,7 +1135,7 @@ Fait :
 - stock ;
 - auth ;
 - back-office ;
-- front connecté.
+- front en mode statique (branchement API prévu).
 
 À finaliser :
 

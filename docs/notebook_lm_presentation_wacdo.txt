@@ -62,7 +62,7 @@ Fonctionnalités déjà présentes :
 - Gestion des rôles pour le back-office.
 - Back-office protégé.
 - Images stockées en base de données et exposées à l'API.
-- Front borne connecté à l'API.
+- Front borne en mode statique dans cette version (catalogue local, commande simulée) ; branchement à l'API prévu en évolution.
 
 Fonctionnalités encore à finaliser :
 
@@ -695,7 +695,7 @@ Forces principales :
 - Gestion des statuts.
 - Gestion du stock ingrédients.
 - Back-office utilisable.
-- Front connecté à l'API.
+- Front en mode statique dans la version présentée, API prête côté serveur.
 - Partie Framework front-end par composants.
 
 
