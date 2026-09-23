@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Exceptions\ValidationException;
 use App\Http\JsonRequest;
 use App\Http\JsonResponse;
+use App\Models\Utilisateur;
 use App\Repositories\DbUtilisateurRepository;
 use App\Security\SessionCookieConfig;
 use Throwable;
@@ -18,6 +19,50 @@ final class AuthController
     }
 
     public function login(): void
+    {
+        $this->authenticate(false);
+    }
+
+    public function clientLogin(): void
+    {
+        $this->authenticate(true);
+    }
+
+    public function register(): void
+    {
+        try {
+            $data = JsonRequest::body();
+            $utilisateur = new Utilisateur(
+                idRole: $this->utilisateurs->findRoleIdByCode('CLIENT'),
+                nom: $this->requiredString($data, 'nom'),
+                prenom: $this->requiredString($data, 'prenom'),
+                email: $this->requiredEmail($data),
+                motDePasseHash: password_hash($this->requiredPassword($data), PASSWORD_DEFAULT),
+                numTel: trim((string) ($data['num_tel'] ?? '')),
+            );
+            $created = $this->utilisateurs->create($utilisateur);
+
+            $this->startSession();
+            session_regenerate_id(true);
+            $_SESSION['user_id'] = $created->idUser;
+
+            JsonResponse::send([
+                'data' => ['user' => $this->utilisateurs->findOneForApi($created->idUser)],
+            ], 201);
+        } catch (ValidationException $exception) {
+            JsonResponse::send([
+                'error' => 'validation_failed',
+                'message' => $exception->getMessage(),
+            ], 422);
+        } catch (Throwable $exception) {
+            JsonResponse::send([
+                'error' => 'server_error',
+                'message' => $exception->getMessage(),
+            ], 500);
+        }
+    }
+
+    private function authenticate(bool $clientOnly): void
     {
         try {
             $data = JsonRequest::body();
@@ -35,6 +80,14 @@ final class AuthController
                     'error' => 'invalid_credentials',
                     'message' => 'Email ou mot de passe incorrect.',
                 ], 401);
+                return;
+            }
+
+            if ($clientOnly && strtoupper((string) $user['code_role']) !== 'CLIENT') {
+                JsonResponse::send([
+                    'error' => 'forbidden',
+                    'message' => 'Cette connexion est réservée aux comptes clients.',
+                ], 403);
                 return;
             }
 
@@ -133,6 +186,28 @@ final class AuthController
         }
 
         return $email;
+    }
+
+    private function requiredString(array $data, string $field): string
+    {
+        $value = trim((string) ($data[$field] ?? ''));
+
+        if ($value === '') {
+            throw ValidationException::forField($field, 'field is required');
+        }
+
+        return $value;
+    }
+
+    private function requiredPassword(array $data): string
+    {
+        $password = (string) ($data['mot_de_passe'] ?? $data['password'] ?? '');
+
+        if (strlen($password) < 8) {
+            throw ValidationException::forField('mot_de_passe', 'password must contain at least 8 characters');
+        }
+
+        return $password;
     }
 
     private function startSession(): void

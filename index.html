@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/css/borne.css?v=20260715-2">
+    <link rel="stylesheet" href="/assets/css/borne.css?v=20260918-1">
 </head>
 <body>
     <main class="application">
@@ -112,6 +112,32 @@
                     <button class="bouton secondaire" type="button" data-fermer-modale>Annuler</button>
                     <button class="bouton" type="button" id="ajouter-boisson">Ajouter à ma commande</button>
                 </div>
+            </div>
+        </div>
+
+        <div class="modale" id="modale-auth" role="dialog" aria-modal="true" aria-labelledby="titre-auth">
+            <div class="panneau-modale fenetre-auth">
+                <button class="bouton-fermer" type="button" data-fermer-modale aria-label="Fermer">×</button>
+                <h2 id="titre-auth">Comment souhaitez-vous commander ?</h2>
+                <p>Vous pouvez utiliser votre compte ou continuer sans compte.</p>
+                <div class="auth-choix" id="auth-choix">
+                    <button class="bouton" type="button" id="auth-connexion">Se connecter</button>
+                    <button class="bouton secondaire" type="button" id="auth-inscription">Créer un compte</button>
+                    <button class="bouton secondaire" type="button" id="auth-invite">Continuer sans compte</button>
+                </div>
+                <form class="form-auth" id="form-auth-connexion" hidden>
+                    <label>Email<input type="email" name="email" autocomplete="username" required></label>
+                    <label>Mot de passe<input type="password" name="mot_de_passe" autocomplete="current-password" required></label>
+                    <button class="bouton" type="submit">Se connecter</button>
+                </form>
+                <form class="form-auth" id="form-auth-inscription" hidden>
+                    <label>Prénom<input type="text" name="prenom" autocomplete="given-name" required></label>
+                    <label>Nom<input type="text" name="nom" autocomplete="family-name" required></label>
+                    <label>Email<input type="email" name="email" autocomplete="email" required></label>
+                    <label>Mot de passe<input type="password" name="mot_de_passe" minlength="8" autocomplete="new-password" required></label>
+                    <button class="bouton" type="submit">Créer mon compte</button>
+                </form>
+                <p class="message-auth" id="message-auth" role="alert"></p>
             </div>
         </div>
     </main>

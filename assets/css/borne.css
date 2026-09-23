@@ -180,16 +180,17 @@ img {
 }
 
 .fleche-slider img {
-    width: 86px;
-    height: 56px;
+    width: 56px;
+    height: 86px;
+    object-fit: contain;
 }
 
 .fleche-gauche img {
-    transform: rotate(-90deg);
+    transform: none;
 }
 
 .fleche-droite img {
-    transform: rotate(90deg);
+    transform: scaleX(-1);
 }
 
 .onglets {
@@ -549,6 +550,44 @@ img {
 
 .fenetre-menu {
     min-height: 550px;
+}
+
+.fenetre-auth {
+    width: 620px;
+}
+
+.auth-choix,
+.form-auth {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.form-auth[hidden],
+.auth-choix[hidden] {
+    display: none;
+}
+
+.form-auth label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.form-auth input {
+    height: 52px;
+    border: 2px solid var(--traits-bordures);
+    border-radius: 8px;
+    padding: 0 14px;
+    font: inherit;
+    font-weight: 400;
+}
+
+.message-auth {
+    min-height: 24px;
+    color: var(--rouge-principal);
 }
 
 .etape-menu {

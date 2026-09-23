@@ -98,7 +98,7 @@ Le projet est aujourd'hui dans une phase de finalisation technique, avec un cadr
 - conserver la logique d'integration Traefik et du reseau hote, sans modifier l'infrastructure existante du serveur ;
 - maintenir un niveau de production raisonnable en mode override local, sans casser le fonctionnement de la stack.
 
-A l'heure actuelle, la base de travail est stable et la structure est coherente. Le projet contient une architecture de deploiement reproductible et une separation claire des roles entre la base, l'API, le front et le contexte serveur. La version presentee utilise les donnees locales de la borne ; les chemins API sont prets mais restent volontairement desactives.
+A l'heure actuelle, la base de travail est stable et la structure est coherente. Le projet contient une architecture de deploiement reproductible et une separation claire des roles entre la base, l'API, le front et le contexte serveur. La version presentee utilise l'API pour le catalogue et la creation de commande, avec un choix de compte client facultatif.
 
 Le point de vigilance a bien distinguer est le suivant : la validation du service PHP ne s'effectue pas par un simple appel `localhost` brut, mais par le contexte Docker/Traefik et les domaines ou points d'entree du projet. La stack est coherent, mais les chemins d'acces externes doivent rester alignes sur l'infrastructure hote et non sur un simple port local non expose.
 
@@ -182,15 +182,17 @@ MariaDB a ete retenue car elle correspond a ces besoins relationnels et s'integr
 
 ### 5.3 JavaScript pour le navigateur
 
-Le front de borne utilise JavaScript vanilla pour gerer les interactions sans ajouter de dependance necessaire a la premiere version :
+Le front de borne utilise JavaScript vanilla pour gerer les interactions avec l'API sans ajouter de dependance necessaire a la premiere version :
 
 - chargement du catalogue ;
 - navigation entre categories ;
 - ajout et modification du panier ;
 - configuration des menus ;
 - ouverture et fermeture des modales ;
-- envoi de la commande ;
-- affichage du ticket et du total retourne par l'API.
+- preparation du contenu de commande ;
+- choix de connexion, de creation de compte ou de commande anonyme ;
+- envoi de la commande a l'API ;
+- affichage du ticket et du total retournes par le serveur.
 
 Le code est organise autour d'un etat central et de fonctions distinctes pour le chargement, la normalisation des donnees, l'affichage et les evenements.
 
@@ -209,7 +211,7 @@ La borne est pensee pour une resolution principale de borne tout en conservant u
 ```mermaid
 flowchart LR
     Client[Client] --> Front[Borne HTML CSS JS]
-    Front -.->|Chemins HTTPS JSON prets| API[API PHP]
+    Front -->|HTTPS JSON| API[API PHP]
     Employe[Employe ou administrateur] --> Back[Back-office]
     Back --> API
     API --> Repositories[Repositories]
@@ -258,7 +260,7 @@ Les controleurs gerent la requete et la reponse. Les repositories regroupent les
 
 ### 7.1 Fonctionnement
 
-Le fichier principal est `assets/js/borne.js`. Il utilise `fetch` pour charger le catalogue depuis `GET /api/catalogue`.
+Le fichier principal est `assets/js/borne.js`. Il utilise les chemins `GET /api/catalogue` et `POST /api/commandes`. Avant la validation, le client peut se connecter, creer un compte ou continuer sans compte. Dans les deux premiers cas, la session client est associee a la commande par le serveur ; dans le dernier cas, `COMMANDES.id_user` reste nul.
 
 Le parcours principal est :
 
@@ -268,8 +270,10 @@ Le parcours principal est :
 4. configuration de la commande ;
 5. affichage du panier ;
 6. choix du mode de service ;
-7. envoi de la commande ;
-8. affichage du numero de ticket.
+7. preparation de la commande ;
+8. choix du compte client ou du mode invite ;
+9. envoi et validation de la commande par l'API ;
+10. affichage du numero de ticket.
 
 ### 7.2 Pourquoi commencer par du vanilla
 
@@ -278,7 +282,7 @@ Le front vanilla a permis de :
 - valider rapidement le parcours fonctionnel ;
 - limiter les dependances au debut du projet ;
 - comprendre le cycle donnees -> etat -> affichage ;
-- tester le contrat entre la borne et l'API ;
+- preparer la structure du contrat entre la borne et l'API ;
 - garder une borne legere a deployer.
 
 Le choix est coherent avec une premiere version qui devait surtout valider le besoin et les flux metier.
@@ -293,13 +297,13 @@ Le JavaScript vanilla devient plus difficile a maintenir lorsque le nombre d'ecr
 - tests unitaires du DOM plus difficiles a organiser ;
 - evolution des options de menus a mieux structurer.
 
-Ces limites justifient l'evolution vers un framework front, sans remettre en cause le travail realise avec la version vanilla.
+Ces limites justifient l'evolution vers un framework front, sans remettre en cause le travail realise avec la version vanilla. Elles s'ajoutent a la decision actuelle de garder l'appel API borne desactive tant que le contrat complet des options de commande n'est pas stabilise.
 
 ---
 
-## 8. API, back-office et regles metier
+## 8. API backend, back-office et regles metier
 
-### 8.1 API publique de la borne
+### 8.1 API utilisee par la borne et le back-office
 
 - `GET /api/health`
 - `GET /api/catalogue`
@@ -308,6 +312,10 @@ Ces limites justifient l'evolution vers un framework front, sans remettre en cau
 - `GET /api/produits/{id}`
 - `GET /api/menus`
 - `POST /api/commandes`
+- `POST /api/auth/client-login`
+- `POST /api/auth/register`
+
+La borne utilise le catalogue et la creation de commande via l'API. La connexion client et la creation de compte sont facultatives ; une commande sans session reste anonyme.
 
 ### 8.2 API protegee du back-office
 
@@ -324,7 +332,7 @@ Ces limites justifient l'evolution vers un framework front, sans remettre en cau
 
 ### 8.3 Regles metier defendables a l'oral
 
-Le backend reste responsable de :
+Lorsque le parcours utilise l'API, le backend est responsable de :
 
 - verifier l'existence des produits et menus ;
 - verifier leur disponibilite ;
@@ -347,7 +355,7 @@ Les transitions invalides sont refusees afin de conserver un etat coherent.
 
 ## 9. Authentification et autorisation
 
-L'authentification du back-office repose sur une session PHP. Le mot de passe est verifie a partir d'un hash et la session est regeneree apres connexion.
+L'authentification repose sur une session PHP. Le back-office utilise `POST /api/auth/login` pour le personnel. La borne utilise `POST /api/auth/client-login` pour limiter la connexion au role `CLIENT`, ou `POST /api/auth/register` pour creer directement un compte client.
 
 Les roles prevus sont :
 
@@ -355,7 +363,7 @@ Les roles prevus sont :
 - `MANAGER` ;
 - `ADMIN`.
 
-La borne peut creer une commande sans compte, car ce besoin appartient au parcours client. Les actions de gestion restent protegees.
+Le role `CLIENT` est utilise par la borne. Le client peut commander sans compte, se connecter avec un compte existant ou creer un compte. Les actions de gestion restent protegees par les roles `EMPLOYE`, `MANAGER` et `ADMIN`.
 
 Cette distinction permet de repondre a deux besoins differents : faciliter le parcours du client et proteger les donnees de gestion.
 
@@ -480,7 +488,7 @@ Cette partie doit etre documentee avec les entites, les migrations, les controle
 
 Le script `bin/smoke_backend.sh` verifie notamment :
 
-- la presence des chemins API prevus ;
+- la reponse de l'API de sante et du catalogue ;
 - le chargement du catalogue ;
 - l'affichage du back-office ;
 - le refus d'une route protegee sans session ;
@@ -517,19 +525,20 @@ Les tests automatises ne couvrent pas encore tous les parcours et toutes les err
 | Attente | Preuve ou realisation | Etat |
 |---|---|---|
 | Front HTML/CSS/JS | `index.html`, `assets/css/borne.css`, `assets/js/borne.js` | Realise |
-| Catalogue dynamique | `GET /api/catalogue` et `chargerProduits()` | Realise |
-| Panier et commande | fonctions de panier et `POST /api/commandes` | Realise |
+| Catalogue dynamique | `GET /api/catalogue` utilise par la borne | Realise |
+| Panier et commande | panier vanilla, `POST /api/commandes`, validation serveur et ticket API | Realise |
 | API back-end | `app/Controllers/`, `app/Http/`, repositories | Realise |
 | Base SQL | MCD, MPD, migrations MariaDB | Realise |
 | MVC et POO | controleurs, modeles, repositories | Realise |
 | Back-office | `app/Views/back_office.php`, `assets/js/back-office.js` | Realise |
 | Authentification | `AuthController`, session PHP | Realise |
+| Compte client facultatif | `client-login`, `register`, session associee a la commande ou `id_user` nul en invite | Realise |
 | Autorisation | `SessionAuthGuard` et roles | Realise |
 | Stock ingredients | repositories et logique commande | Realise |
 | Deploiement | Docker, Apache, MariaDB, Traefik | Realise / a demontrer |
 | Tests | `bin/smoke_backend.sh` | Partiel |
 | Options avancees de menu | contrat cible prepare | A finaliser |
-| Framework | partie a documenter avec les fichiers de l'implementation retenue | A completer selon version presentee |
+| Framework | declinaison front-end par composants presentee separement de la borne vanilla | A rattacher aux fichiers de la version Framework presentee |
 
 ---
 
@@ -553,7 +562,7 @@ Les tests automatises ne couvrent pas encore tous les parcours et toutes les err
 
 ### Pourquoi autoriser une commande sans compte ?
 
-> Le client de la borne n'a pas besoin d'un compte pour commander. En revanche, les utilisateurs internes disposent d'une authentification et de roles pour acceder au back-office.
+> Le client peut commander sans compte, se connecter avec un compte client existant ou en creer un avant de valider. Le compte est facultatif et la commande anonyme reste disponible. Les utilisateurs internes ont une connexion separee pour acceder au back-office.
 
 ### Que peut-on ameliorer ?
 
@@ -586,7 +595,7 @@ Les tests automatises ne couvrent pas encore tous les parcours et toutes les err
 
 ## 16. Conclusion
 
-WACDO est une application complete autour d'un parcours de commande : une borne client, un front vanilla, une API PHP preparee, un back-office, une base MariaDB et une infrastructure Dockerisee. Dans la version presentee, la borne fonctionne avec ses donnees locales ; le branchement API est une evolution prevue.
+WACDO est une application complete autour d'un parcours de commande : une borne client, un front vanilla, une API PHP, un back-office, une base MariaDB et une infrastructure Dockerisee. Dans la version presentee, la borne utilise l'API et propose trois parcours : commande anonyme, connexion client ou creation de compte client.
 
 Les choix techniques repondent a des besoins identifies :
 
@@ -604,11 +613,11 @@ Le projet est presentable comme une construction progressive et argumentee. Il n
 
 ## 17. Synthese executive pour le jury
 
-WACDO est un projet de commande rapide realise dans un contexte de restaurant a service rapide, avec une borne client, une API PHP, un back-office et une base relationnelle MariaDB. Le projet montre une architecture cohérente entre l'experience client, la logique serveur et la gestion interne des commandes. La force du projet repose sur la clarté des responsabilités : la borne collecte les choix du client, l'API valide les regles metier et la base conserve les donnees de reference. Le back-office permet au personnel de suivre et de traiter les commandes sans exposer la logique critique au navigateur.
+WACDO est un projet de commande rapide realise dans un contexte de restaurant a service rapide, avec une borne client, une API PHP, un back-office et une base relationnelle MariaDB. Le projet montre une architecture coherente entre l'experience client, la logique serveur et la gestion interne des commandes. La force du projet repose sur la clarte des responsabilites : la borne collecte les choix du client, l'API valide les regles metier et la base conserve les donnees de reference. Le compte client est associe par la session ; sans connexion, la commande est enregistree comme anonyme.
 
 Le projet a ete construit de maniere progressive. La version vanilla a permis de valider le parcours principal rapidement, avant de formaliser les choix de structure et les regles metier. Ensuite, la documentation, la modelisation, l'infrastructure Docker et la separation des services ont permis d'aboutir a une solution solide et presentable. Cette progression relie le besoin metier, la modelisation, le code et le deploiement.
 
-Le projet est donc a la fois une preuve de competence technique et une preuve de methodologie : analyse du besoin, modelisation, conception, development, integration, deployment et validation. Il est coherent, explicable et presentable devant un jury, en mettant l'accent sur les decisions de conception et sur la justesse des choix.
+Le projet est donc a la fois une preuve de competence technique et une preuve de methodologie : analyse du besoin, modelisation, conception, developpement, integration, deploiement et validation. Il est coherent, explicable et presentable devant un jury, en mettant l'accent sur les decisions de conception et sur la justesse des choix.
 
 ---
 
@@ -652,20 +661,21 @@ Demontrer la logique de commande d'un restaurant de type fast-food avec la separ
 - back-office pour suivre et traiter les commandes ;
 - base relationnelle pour stocker les donnees et les relations.
 
-### Scenario propose
+### Scenario propose pour la version actuelle
 1. Ouvrir la borne client.
 2. Choisir une categorie et un produit.
 3. Ajouter des elements au panier.
 4. Valider la commande et verifier la generation du ticket.
 5. Ouvrir le back-office.
-6. Consulter la commande recemment creee.
-7. Verifier le statut, le montant et les informations associees.
-8. Expliquer pourquoi la validation passe par le serveur et non par le navigateur.
+6. Presenter separement le back-office avec les donnees presentes en base.
+7. Executer le script de verification backend pour controler l'API, la session et les routes protegees.
+8. Montrer le choix entre connexion client, creation de compte et commande sans compte.
 
 ### Ce qu'il faut montrer en live
 - le catalogue dynamique ;
 - le panier et ses totaux ;
-- la creation de commande ;
+- le ticket retourne par l'API ;
+- la verification de l'API backend au moyen du script de verification ;
 - la gestion de la commande dans le back-office ;
 - la logique de validation des regles metier ;
 - la separation claire des services de l'application.
@@ -698,7 +708,7 @@ Le jury examine la coherence entre le besoin et les technologies. Le candidat do
 Le jury verifie si le candidat sait faire vivre le projet. Il faut montrer :
 - la borne en action ;
 - la commande ;
-- la trace et le suivi dans le back-office ;
+- la trace et le suivi dans le back-office sur les donnees backend ;
 - la logique de stockage et de relations ;
 - la distinction entre contenu affiche et donnees de reference.
 

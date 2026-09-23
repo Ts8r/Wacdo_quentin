@@ -66,7 +66,7 @@ final class CommandeController
             $data = JsonRequest::body();
 
             $commande = $this->commandes->createForApi(
-                idUser: $this->optionalIdUser($data),
+                idUser: $this->authGuard?->currentUserIdForRoles(['CLIENT']),
                 canal: $this->requiredCanal($data),
                 produits: $this->normalizeLines($data['produits'] ?? [], 'produits'),
                 menus: $this->normalizeLines($data['menus'] ?? [], 'menus'),
@@ -163,21 +163,6 @@ final class CommandeController
                 'message' => $exception->getMessage(),
             ], 500);
         }
-    }
-
-    private function optionalIdUser(array $data): ?int
-    {
-        if (!array_key_exists('id_user', $data) || $data['id_user'] === null || $data['id_user'] === '') {
-            return null;
-        }
-
-        $idUser = (int) $data['id_user'];
-
-        if ($idUser <= 0) {
-            throw ValidationException::forField('id_user', 'must be a positive integer');
-        }
-
-        return $idUser;
     }
 
     private function requiredCanal(array $data): string

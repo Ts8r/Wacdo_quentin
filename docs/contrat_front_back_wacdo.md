@@ -31,7 +31,13 @@ POST /api/commandes
 POST /api/auth/login
 POST /api/auth/logout
 GET  /api/auth/me
+POST /api/auth/client-login
+POST /api/auth/register
 ```
+
+`/api/auth/login` est utilise par le back-office. La borne utilise
+`/api/auth/client-login` et `/api/auth/register`. Une commande cliente est
+associee au compte de la session ; sans session, `commandes.id_user` reste nul.
 
 ### Back-office protege
 

@@ -626,7 +626,8 @@ Routes protégées :
 - modification ingrédients ;
 - consultation utilisateurs.
 
-La borne peut créer une commande sans compte.
+La borne propose trois parcours : connexion client, création de compte client ou commande sans compte.
+La session client est associée à la commande ; sans session, `id_user` reste nul.
 Mais elle ne peut pas accéder aux fonctions d'administration.
 
 
@@ -657,7 +658,7 @@ N - Nouveauté
 Le projet propose une borne interactive.
 Le catalogue est dynamique.
 Les images sont stockées en base.
-Un framework front est prévu pour une future version.
+La partie Framework présente une organisation front-end par composants.
 
 C - Confort
 
@@ -695,7 +696,7 @@ Forces principales :
 - Gestion du stock ingrédients.
 - Back-office utilisable.
 - Front connecté à l'API.
-- Projet évolutif vers un framework front.
+- Partie Framework front-end par composants.
 
 
 22. LIMITES ACTUELLES
@@ -750,7 +751,7 @@ Slide 3 : Objectifs
 Catalogue, commande, paiement simulé, suivi back-office, stock, sécurité.
 
 Slide 4 : Stack technique
-HTML, CSS, JavaScript, futur framework front, PHP, MariaDB, Docker.
+HTML, CSS, JavaScript, partie Framework front, PHP, MariaDB, Docker.
 
 Slide 5 : Architecture générale
 Client vers front, front vers API, back-office vers API, API vers MariaDB.

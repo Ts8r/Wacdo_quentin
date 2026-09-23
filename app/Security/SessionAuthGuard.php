@@ -64,6 +64,27 @@ final class SessionAuthGuard
         return $user;
     }
 
+    public function currentUserIdForRoles(array $allowedRoles): ?int
+    {
+        $this->startSession();
+        $idUser = (int) ($_SESSION['user_id'] ?? 0);
+
+        if ($idUser <= 0) {
+            return null;
+        }
+
+        $user = $this->utilisateurs->findOneForApi($idUser);
+
+        if ($user === null) {
+            return null;
+        }
+
+        $role = strtoupper((string) ($user['role']['code'] ?? ''));
+        $allowedRoles = array_map('strtoupper', $allowedRoles);
+
+        return in_array($role, $allowedRoles, true) ? $idUser : null;
+    }
+
     private function startSession(): void
     {
         if (session_status() !== PHP_SESSION_ACTIVE) {

@@ -61,7 +61,7 @@ const CHEMINS_API = {
     catalogue: `${API_BASE}/catalogue`,
     commandes: `${API_BASE}/commandes`
 };
-const API_ACTIVE = false;
+const API_ACTIVE = true;
 const SOURCE_DONNEES = API_ACTIVE ? "api" : "static";
 const URL_DONNEES = {
     static: "/wacdo/produits.json",
@@ -78,7 +78,8 @@ const etat = {
     commandeFinalisee: null,
     tailleMenu: "M",
     quantiteBoisson: 1,
-    etapeMenu: 1
+    etapeMenu: 1,
+    utilisateur: null
 };
 
 const elements = {
@@ -233,6 +234,11 @@ function lierEvenements() {
     document.querySelector("#diminuer-boisson").addEventListener("click", () => modifierQuantiteBoisson(-1));
     document.querySelector("#abandon-commande").addEventListener("click", reinitialiserCommande);
     document.querySelector("#payer-commande").addEventListener("click", commencerPaiement);
+    document.querySelector("#auth-connexion").addEventListener("click", () => afficherFormulaireAuth("connexion"));
+    document.querySelector("#auth-inscription").addEventListener("click", () => afficherFormulaireAuth("inscription"));
+    document.querySelector("#auth-invite").addEventListener("click", continuerSansCompte);
+    document.querySelector("#form-auth-connexion").addEventListener("submit", connecterClient);
+    document.querySelector("#form-auth-inscription").addEventListener("submit", inscrireClient);
     elements.boutonCategoriesGauche.addEventListener("click", () => elements.onglets.scrollBy({ left: -300, behavior: "smooth" }));
     elements.boutonCategoriesDroite.addEventListener("click", () => elements.onglets.scrollBy({ left: 300, behavior: "smooth" }));
     document.querySelector("#nouvelle-commande").addEventListener("click", reinitialiserCommande);
@@ -494,6 +500,7 @@ function modifierQuantiteBoisson(step) {
 function reinitialiserCommande() {
     etat.panier = [];
     etat.commandeFinalisee = null;
+    etat.utilisateur = null;
     etat.mode = "sur_place";
     etat.categorieActive = "menus";
     elements.numeroCommande.textContent = "--";
@@ -510,7 +517,68 @@ async function commencerPaiement() {
         return;
     }
 
-    await validerCommande();
+    if (etat.utilisateur) {
+        await validerCommande();
+        return;
+    }
+
+    afficherFormulaireAuth(null);
+    ouvrirModale("#modale-auth");
+}
+
+function afficherFormulaireAuth(type) {
+    const choix = document.querySelector("#auth-choix");
+    const connexion = document.querySelector("#form-auth-connexion");
+    const inscription = document.querySelector("#form-auth-inscription");
+    const message = document.querySelector("#message-auth");
+
+    choix.hidden = type !== null;
+    connexion.hidden = type !== "connexion";
+    inscription.hidden = type !== "inscription";
+    message.textContent = "";
+}
+
+function continuerSansCompte() {
+    fermerModales();
+    validerCommande();
+}
+
+async function connecterClient(evenement) {
+    evenement.preventDefault();
+    await authentifierClient("/api/auth/client-login", new FormData(evenement.currentTarget));
+}
+
+async function inscrireClient(evenement) {
+    evenement.preventDefault();
+    await authentifierClient("/api/auth/register", new FormData(evenement.currentTarget));
+}
+
+async function authentifierClient(chemin, formulaire) {
+    const message = document.querySelector("#message-auth");
+    const donnees = Object.fromEntries(formulaire.entries());
+
+    try {
+        const reponse = await fetch(`${API_BASE}${chemin}`, {
+            method: "POST",
+            credentials: "include",
+            headers: {
+                Accept: "application/json",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(donnees)
+        });
+        const payload = await reponse.json().catch(() => ({}));
+
+        if (!reponse.ok) {
+            throw new Error(payload.message || `HTTP ${reponse.status}`);
+        }
+
+        etat.utilisateur = payload.data?.user ?? null;
+        fermerModales();
+        await validerCommande();
+    } catch (error) {
+        message.textContent = messageErreurCommande(error);
+    }
 }
 
 async function terminerCommande() {

@@ -7,14 +7,11 @@ Objectif : produire un support clair, professionnel, soutenable à l'oral, avec 
 Important :
 
 - Ne pas inclure de vrais identifiants dans la présentation.
-- Ne pas présenter le projet comme totalement terminé.
+- Présenter le MVP comme terminé sur son périmètre défini, tout en distinguant les évolutions hors périmètre.
 - Dire que le backend est fonctionnel en MVP.
-- Dire que le front actuel est en HTML/CSS/JavaScript vanilla, et qu'un framework front est prévu/en préparation pour une future version.
-- La présentation doit rester pédagogique : expliquer les choix simplement.
-
----
-
-## 1. Informations Générales
+- Dire que le front actuel est en HTML/CSS/JavaScript vanilla et que le parcours client est relie a l'API.
+- Dire que la borne propose la connexion client, la creation de compte et la commande anonyme.
+- Présenter la partie Framework comme une déclinaison front-end complémentaire.
 
 ### Nom Du Projet
 
@@ -76,6 +73,9 @@ Permettre à un client de passer une commande depuis une borne, puis permettre �
 - Débit du stock ingrédient lors de la création d'une commande.
 - Recrédit du stock en cas d'annulation.
 - Front borne connecté à l'API.
+- Connexion client facultative depuis la borne.
+- Création de compte client facultative depuis la borne.
+- Commande anonyme conservée avec `id_user` nul.
 
 ### Pas Encore Totalement Terminé
 
@@ -86,9 +86,9 @@ Permettre à un client de passer une commande depuis une borne, puis permettre �
   - sauces.
 - La taille de boisson `30 Cl / 50 Cl` et le supplément associé ne sont pas encore modélisés côté backend.
 - Le numéro de chevalet n'est pas encore enregistré en base.
-- Un framework front est prévu/en préparation pour structurer une future version plus maintenable.
+- La partie Framework est présentée comme une déclinaison front-end organisée en composants.
 - Les tests automatisés ne sont pas encore complets.
-- La gestion avancée des comptes n'est pas finalisée.
+- La gestion avancée des comptes internes et la journalisation restent des évolutions du back-office.
 - La journalisation des actions administrateur reste une perspective.
 
 ---
@@ -101,11 +101,11 @@ Permettre à un client de passer une commande depuis une borne, puis permettre �
 - CSS
 - JavaScript vanilla
 
-### Frontend Prévu
+### Partie Framework
 
-Un framework front est prévu/en préparation pour une version ultérieure.
+La borne vanilla constitue le front actuellement présenté et relié à l'API. La partie Framework correspond à une déclinaison front-end de l'interface.
 
-Objectif du futur framework :
+Objectif de la partie Framework :
 
 - mieux organiser les composants ;
 - faciliter la maintenance ;
@@ -115,7 +115,7 @@ Objectif du futur framework :
 
 Formulation orale possible :
 
-> Le front actuel est volontairement simple, en HTML/CSS/JavaScript vanilla, pour valider le fonctionnement avec l'API. Une évolution avec un framework front est prévue afin de rendre l'interface plus maintenable et plus modulaire.
+> Le front de la borne est réalisé en HTML, CSS et JavaScript vanilla, avec un parcours client relié à l'API et trois choix avant validation : se connecter, créer un compte ou continuer sans compte. La partie Framework montre comment organiser cette même interface avec des composants réutilisables et un état plus structuré.
 
 ### Backend
 
@@ -866,12 +866,12 @@ Arguments :
 - catalogue dynamique ;
 - back-office connecté ;
 - images stockées en base ;
-- futur framework front en préparation ;
+- partie Framework front organisée en composants ;
 - architecture évolutive.
 
 Phrase :
 
-> Le projet est prêt à évoluer vers une interface front plus moderne avec framework.
+> La partie Framework montre une organisation front-end par composants, complémentaire de la borne vanilla déjà reliée à l'API.
 
 ### C - Confort
 
@@ -929,7 +929,7 @@ Phrase :
 - Commandes avec statuts.
 - Back-office utilisable.
 - Front connecté à l'API.
-- Évolutivité prévue avec futur framework front.
+- Partie Framework présentée comme déclinaison front-end par composants.
 
 ---
 
@@ -942,7 +942,7 @@ Phrase :
 - Tests automatisés incomplets.
 - Gestion avancée utilisateurs non terminée.
 - Journalisation admin non implémentée.
-- Framework front encore en préparation.
+- Version Framework à présenter séparément de la borne vanilla et de son parcours API.
 
 Formulation conseillée :
 
@@ -1028,7 +1028,7 @@ Objectifs :
 Afficher :
 
 - HTML/CSS/JS vanilla ;
-- futur framework front en préparation ;
+- partie Framework front par composants ;
 - PHP 8.3 ;
 - MariaDB ;
 - Docker ;
@@ -1120,7 +1120,7 @@ Table :
 |---|---|
 | Sécurité | Auth, rôles, prix serveur |
 | Orgueil | Architecture MVC + Docker |
-| Nouveauté | Borne dynamique + futur framework |
+| Nouveauté | Borne dynamique + comptes clients facultatifs + partie Framework |
 | Confort | Parcours simple |
 | Argent | Prix et stock maîtrisés |
 | Sympathie | Interface familière |
@@ -1186,7 +1186,7 @@ Contraintes :
 - Inclure une slide SONCAS.
 - Inclure une slide forces / limites.
 - Inclure une slide perspectives.
-- Mentionner que le front actuel est en HTML/CSS/JavaScript vanilla et qu'un framework front est prévu/en préparation.
+- Mentionner que le front actuel est en HTML/CSS/JavaScript vanilla, relié à l'API, avec connexion client facultative ; présenter la partie Framework comme une déclinaison front-end par composants.
 - Ne pas présenter le projet comme totalement terminé.
 - Insister sur le fait que le backend est source de vérité pour les prix, le stock et la sécurité.
 - Préparer des notes orales courtes pour chaque slide.
