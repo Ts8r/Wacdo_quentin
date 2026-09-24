@@ -405,7 +405,6 @@ Preuves :
 - `docker-compose.yml` ;
 - `docker-compose.prod.yml` ;
 - `docker/apache/` ;
-- `docker/php/` ;
 - `docker/php-fpm/` ;
 - `README.md`.
 
