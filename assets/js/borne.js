@@ -545,12 +545,12 @@ function continuerSansCompte() {
 
 async function connecterClient(evenement) {
     evenement.preventDefault();
-    await authentifierClient("/api/auth/client-login", new FormData(evenement.currentTarget));
+    await authentifierClient("/auth/client-login", new FormData(evenement.currentTarget));
 }
 
 async function inscrireClient(evenement) {
     evenement.preventDefault();
-    await authentifierClient("/api/auth/register", new FormData(evenement.currentTarget));
+    await authentifierClient("/auth/register", new FormData(evenement.currentTarget));
 }
 
 async function authentifierClient(chemin, formulaire) {
