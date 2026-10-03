@@ -175,14 +175,14 @@ flowchart TD
 
 Le traitement conceptuel reste le meme que la borne soit construite en JavaScript vanilla ou avec React.
 
-Dans la version actuellement presentee :
+Dans la version actuellement presentee, la borne tourne en mode deconnecte (`const API_ACTIVE = false;` dans `assets/js/borne.js`) :
 
-- le catalogue de la borne est charge par l'API ;
-- le client peut se connecter avec un compte `CLIENT` ;
-- le client peut creer un compte `CLIENT` ;
-- le client peut continuer sans compte ;
-- la session client est associee automatiquement a la commande ;
-- la confirmation de commande est retournee par l'API ;
+- le catalogue de la borne est lu dans `wacdo/produits.json` ;
+- le client peut choisir de se connecter, de creer un compte `CLIENT` ou de continuer sans compte ;
+- en mode deconnecte, la connexion et la creation de compte sont simulees dans le navigateur ;
+- la confirmation de commande est simulee localement (ticket `TEST-...`, total calcule par l'interface) ;
+- les appels a l'API sont prepares (`GET /api/catalogue`, `POST /api/auth/client-login`, `POST /api/auth/register`, `POST /api/commandes`) et s'activent en passant `API_ACTIVE` a `true` ;
+- cote serveur, les routes client existent et associent automatiquement la commande au compte lorsqu'une session client est active ;
 - le back-office utilise le backend PHP et la base MariaDB.
 
-Le fonctionnement est donc relie de bout en bout pour le parcours client principal. Les options avancees de composition des menus restent un sujet distinct du compte client.
+Le parcours client principal reste donc a brancher sur l'API, puis a valider par un test de bout en bout sur l'URL de production. Les options avancees de composition des menus restent un sujet distinct du compte client.
