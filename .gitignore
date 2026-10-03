@@ -7,3 +7,6 @@ mariadb_data/
 *.log
 .DS_Store
 _incoming/
+
+# Dossier des livrables d'examen (docx, pptx, pdf) - non versionne
+/exam DW/
