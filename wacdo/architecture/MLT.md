@@ -64,7 +64,7 @@ Les pointilles indiquent que la borne actuelle n'est pas branchee en permanence 
 | Element | Implementation logique |
 |---|---|
 | Declencheur | Validation du panier |
-| Interface actuelle | Envoi API avec choix compte client ou invite |
+| Interface actuelle | Choix compte client ou invite ; envoi API prepare mais desactive (`API_ACTIVE = false`), confirmation simulee localement |
 | Route cible | `POST /api/commandes` |
 | Controleur cible | Controleur API des commandes |
 | Validation | Produits, menus, quantites, disponibilite et donnees de commande |
@@ -201,9 +201,9 @@ Le MLT conserve le meme backend pour les deux interfaces.
 
 - interface HTML/CSS/JavaScript directe ;
 - etat gere dans `assets/js/borne.js` ;
-- catalogue charge via l'API ;
+- catalogue lu dans `wacdo/produits.json` (appel `GET /api/catalogue` prepare, desactive par `API_ACTIVE = false`) ;
 - choix de connexion, inscription ou commande invite ;
-- confirmation retournee par l'API.
+- confirmation simulee localement tant que `API_ACTIVE = false`, retournee par l'API une fois le branchement active.
 
 ### Interface React
 

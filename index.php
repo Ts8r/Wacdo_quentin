@@ -55,8 +55,6 @@ $router->get('/api/catalogue', [$apiController, 'catalogue']);
 $router->post('/api/auth/login', [$authController, 'login']);
 $router->post('/api/auth/client-login', [$authController, 'clientLogin']);
 $router->post('/api/auth/register', [$authController, 'register']);
-$router->post('/api/auth/client-login', [$authController, 'clientLogin']);
-$router->post('/api/auth/register', [$authController, 'register']);
 $router->post('/api/auth/logout', [$authController, 'logout']);
 $router->get('/api/auth/me', [$authController, 'me']);
 $router->get('/api/utilisateurs', [$utilisateurController, 'index']);
