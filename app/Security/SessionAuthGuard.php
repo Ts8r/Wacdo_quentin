@@ -33,10 +33,7 @@ final class SessionAuthGuard
         try {
             $user = $this->utilisateurs->findOneForApi($idUser);
         } catch (Throwable $exception) {
-            JsonResponse::send([
-                'error' => 'server_error',
-                'message' => $exception->getMessage(),
-            ], 500);
+            JsonResponse::serverError($exception);
             return null;
         }
 

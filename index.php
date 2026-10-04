@@ -10,6 +10,7 @@ use App\Controllers\HomeController;
 use App\Controllers\IngredientController;
 use App\Controllers\UtilisateurController;
 use App\Http\Cors;
+use App\Http\JsonResponse;
 use App\Http\Router;
 use App\Repositories\DbCategorieRepository;
 use App\Repositories\DbCommandeRepository;
@@ -18,6 +19,12 @@ use App\Repositories\DbMenuRepository;
 use App\Repositories\DbProduitRepository;
 use App\Repositories\DbUtilisateurRepository;
 use App\Security\SessionAuthGuard;
+
+// Aucune erreur PHP n'est affichée au client ; une exception non attrapée (base indisponible, route sans try) devient un 500 générique.
+ini_set('display_errors', '0');
+set_exception_handler(static function (Throwable $exception): void {
+    JsonResponse::serverError($exception);
+});
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $uri = $_SERVER['REQUEST_URI'] ?? '/';

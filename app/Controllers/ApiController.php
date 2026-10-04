@@ -35,10 +35,7 @@ final class ApiController
                 'database' => (string) $this->pdo->query('SELECT DATABASE()')->fetchColumn(),
             ]);
         } catch (Throwable $exception) {
-            JsonResponse::send([
-                'status' => 'failed',
-                'error' => $exception->getMessage(),
-            ], 500);
+            JsonResponse::serverError($exception, ['status' => 'failed', 'error' => 'database_unavailable']);
         }
     }
 
@@ -111,10 +108,7 @@ final class ApiController
                 'message' => $exception->getMessage(),
             ], 422);
         } catch (Throwable $exception) {
-            JsonResponse::send([
-                'error' => 'server_error',
-                'message' => $exception->getMessage(),
-            ], 500);
+            JsonResponse::serverError($exception);
         }
     }
 
@@ -149,10 +143,7 @@ final class ApiController
                 'message' => $exception->getMessage(),
             ], 422);
         } catch (Throwable $exception) {
-            JsonResponse::send([
-                'error' => 'server_error',
-                'message' => $exception->getMessage(),
-            ], 500);
+            JsonResponse::serverError($exception);
         }
     }
 
