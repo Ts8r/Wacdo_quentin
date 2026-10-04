@@ -3,7 +3,7 @@
 ## Sources disponibles
 
 - `dictionnaire.csv` : dictionnaire de donnees
-- `mcd.mmd` : modele conceptuel de donnees
+- `mcd.mmd` : modele conceptuel de donnees (MCD Merise de la figure 5 du dossier : entites, associations et cardinalites, sans cle etrangere)
 - `mld.md` : explication du modele logique
 - `mld.mmd` : schema relationnel du modele logique
 - `mpd.sql` : modele physique et script SQL
@@ -16,6 +16,8 @@
 	Docker et reverse proxy
 - `chronologie-et-vocabulaire-wacdo.md` : ordre de construction, dates Git et
 	glossaire technique et metier
+
+L'ancienne ebauche draw.io du MCD (12 mars 2026) ne correspond plus au modele : elle est archivee dans `archive/MCD-ebauche-2026-03-12.drawio.xml`.
 
 ## Captures manquantes
 
