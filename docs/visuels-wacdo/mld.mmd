@@ -1,18 +1,18 @@
 erDiagram
-    ROLES ||--o{ UTILISATEURS : attribue
-    UTILISATEURS o|--o{ COMMANDES : passe
-    STATUTS_COMMANDES ||--o{ COMMANDES : definit
-    CANAUX ||--o{ COMMANDES : provient_de
-    COMMANDES ||--o{ COMMANDE_PRODUIT : contient
-    PRODUITS ||--o{ COMMANDE_PRODUIT : reference
-    COMMANDES ||--o{ COMMANDE_MENU : contient
-    MENUS ||--o{ COMMANDE_MENU : reference
-    MENUS ||--o{ MENU_PRODUIT : compose
-    PRODUITS ||--o{ MENU_PRODUIT : inclut
     INGREDIENTS ||--o{ INGREDIENTS_PRODUITS : compose
+    ROLES ||--o{ UTILISATEURS : attribue
+    MENUS ||--o{ MENU_PRODUIT : compose
+    UTILISATEURS o|--o{ COMMANDES : passe
     PRODUITS ||--o{ INGREDIENTS_PRODUITS : contient
-    PRODUITS ||--o{ PRODUITS_CATEGORIES : classe
+    CANAUX ||--o{ COMMANDES : provient_de
+    COMMANDES ||--o{ COMMANDE_MENU : contient
+    STATUTS_COMMANDES ||--o{ COMMANDES : definit
+    COMMANDES ||--o{ COMMANDE_PRODUIT : contient
+    MENUS ||--o{ COMMANDE_MENU : reference
     CATEGORIES ||--o{ PRODUITS_CATEGORIES : regroupe
+    PRODUITS ||--o{ COMMANDE_PRODUIT : reference
+    PRODUITS ||--o{ MENU_PRODUIT : inclut
+    PRODUITS ||--o{ PRODUITS_CATEGORIES : classe
 
     ROLES {
         int id_role PK
