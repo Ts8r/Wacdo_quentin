@@ -55,10 +55,7 @@ final class AuthController
                 'message' => $exception->getMessage(),
             ], 422);
         } catch (Throwable $exception) {
-            JsonResponse::send([
-                'error' => 'server_error',
-                'message' => $exception->getMessage(),
-            ], 500);
+            JsonResponse::serverError($exception);
         }
     }
 
@@ -106,10 +103,7 @@ final class AuthController
                 'message' => $exception->getMessage(),
             ], 422);
         } catch (Throwable $exception) {
-            JsonResponse::send([
-                'error' => 'server_error',
-                'message' => $exception->getMessage(),
-            ], 500);
+            JsonResponse::serverError($exception);
         }
     }
 
@@ -166,10 +160,7 @@ final class AuthController
 
             JsonResponse::send(['data' => ['user' => $user]]);
         } catch (Throwable $exception) {
-            JsonResponse::send([
-                'error' => 'server_error',
-                'message' => $exception->getMessage(),
-            ], 500);
+            JsonResponse::serverError($exception);
         }
     }
 

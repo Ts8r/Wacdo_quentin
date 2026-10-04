@@ -30,15 +30,14 @@ final class ApiController
     public function health(): void
     {
         try {
+            // La base est interrogée pour vérifier qu'elle répond ; son nom interne n'est pas renvoyé.
+            $this->pdo->query('SELECT 1');
             JsonResponse::send([
                 'status' => 'ok',
-                'database' => (string) $this->pdo->query('SELECT DATABASE()')->fetchColumn(),
+                'database' => 'ok',
             ]);
         } catch (Throwable $exception) {
-            JsonResponse::send([
-                'status' => 'failed',
-                'error' => $exception->getMessage(),
-            ], 500);
+            JsonResponse::serverError($exception, ['status' => 'failed', 'error' => 'database_unavailable']);
         }
     }
 
@@ -111,10 +110,7 @@ final class ApiController
                 'message' => $exception->getMessage(),
             ], 422);
         } catch (Throwable $exception) {
-            JsonResponse::send([
-                'error' => 'server_error',
-                'message' => $exception->getMessage(),
-            ], 500);
+            JsonResponse::serverError($exception);
         }
     }
 
@@ -149,10 +145,7 @@ final class ApiController
                 'message' => $exception->getMessage(),
             ], 422);
         } catch (Throwable $exception) {
-            JsonResponse::send([
-                'error' => 'server_error',
-                'message' => $exception->getMessage(),
-            ], 500);
+            JsonResponse::serverError($exception);
         }
     }
 
