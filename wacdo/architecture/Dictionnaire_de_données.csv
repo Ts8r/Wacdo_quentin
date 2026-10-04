@@ -77,7 +77,7 @@ quantite,N(3),EI,Quantité du produit incluse dans le menu,"Not null, ≥ 1"
 INGREDIENTS_PRODUITS,,,,
 id_produit,N(6),EI,Identifiant du produit,"PK, FK PRODUITS"
 id_ingredient,N(6),EI,Identifiant de l’ingrédient utilisé,"PK, FK INGREDIENTS"
-quantite,"N(6,2)",EI,Quantité d’ingrédient nécessaire pour le produit,"Not null, ≥ 1"
+quantite,N(6),EI,Quantité d’ingrédient nécessaire pour le produit,"Not null, ≥ 1"
 ,,,,
 STATUTS_COMMANDES,,,,
 id_statut,N(2),EI,Identifiant du statut,PK
