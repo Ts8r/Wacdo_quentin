@@ -80,10 +80,10 @@ class Ingredient {
   +idIngredient: int
   +nom: string
   +coutUnitaire: float
-  +quantite: float
-  +debiter(qte:float): void
-  +crediter(qte:float): void
-  +estDisponible(qte:float): bool
+  +quantite: int
+  +debiter(qte:int): void
+  +crediter(qte:int): void
+  +estDisponible(qte:int): bool
 }
 
 %% =========================
@@ -121,7 +121,7 @@ class MenuProduit {
 class IngredientsProduits {
   +idIngredient: int
   +idProduit: int
-  +quantite: float
+  +quantite: int
 }
 
 class ProduitsCategories {

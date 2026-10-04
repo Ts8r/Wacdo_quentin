@@ -1,88 +1,92 @@
 ﻿Code,Type,Nature,Description,Remarques et contraintes
 ROLES,,,,
 id_role,N(2),EI,Identifiant du rôle,PK
-code_role,X(20),EI,Code court du rôle,"Unique (ex: CLIENT, EMPLOYE, MANAGER, ADMIN)"
-libelle,X(30),EI,Libellé du rôle,"client, employé, manager, admin"
+code_role,X(50),EI,Code court du rôle,"Not null, Unique (ex: CLIENT, EMPLOYE, MANAGER, ADMIN)"
+libelle,X(100),EI,Libellé du rôle,"Not null (client, employé, manager, admin)"
 ,,,,
 UTILISATEURS,,,,
 id_user,N(6),EI,Identifiant utilisateur,PK
-nom,X(50),EI,Nom de l’utilisateur,Not null
-prenom,X(50),EI,Prénom de l’utilisateur,Not null
-email,X(100),EI,Adresse email,Not null Unique
-mot_de_passe,X(255),EI,MDP chiffré,Hashé
-num_tel,X(15),EI,Numéro de tel,"Optionnel, format E.164 conseillé"
-id_role,N(2),EI,Rôle de l’utilisateur,FK ROLE
+nom,X(100),EI,Nom de l’utilisateur,Not null
+prenom,X(100),EI,Prénom de l’utilisateur,Not null
+email,X(190),EI,Adresse email,Not null Unique
+mot_de_passe_hash,X(255),EI,"Empreinte (hash) du mot de passe, jamais stocké en clair","Not null, calculée avec password_hash()"
+num_tel,X(20),EI,Numéro de tel,"Optionnel, format E.164 conseillé"
+id_role,N(2),EI,Rôle de l’utilisateur,"FK ROLES, Not null"
+created_at,DateTime,EI,Date et heure de création du compte,"Not null, renseignée automatiquement par la base"
 ,,,,
 CATEGORIES,,,,
 id_cat,N(3),EI,Identifiant catégorie,PK
-type,X(50),EI,Nom/type de catégorie,"Not null (ex: Burger, Boisson, Dessert)"
+type,X(80),EI,Nom/type de catégorie,"Not null (ex: Burger, Boisson, Dessert)"
 description,X(255),EI,Description de la catégorie,Optionnel
+image,Binaire,EI,Image de la catégorie,"Optionnel, stockée en base (MEDIUMBLOB)"
+image_mime,X(80),EI,Type MIME de l’image,"Optionnel (ex : image/png, image/jpeg, image/webp)"
 ,,,,
 PRODUITS,,,,
 id_produit,N(6),EI,Identifiant produit,PK
-nom,X(80),EI,Nom du produit,"Big Mac, Nuggets,…"
-description,X(255),EI,Description produit,Optionnel
-prix_unitaire,"N(5,2)",EI,Prix unitaire en euros,Not null
-disponibilite,N(1),EI,Disponibilité produit,"CHECK (disponibilite IN (0,1))"
-quantite,N(3),EI,Stock produit,≥ 0
+nom,X(120),EI,Nom du produit,"Not null (Big Mac, Nuggets,…)"
+description,Texte long,EI,Description produit,Optionnel (TEXT en base)
+prix_unitaire,"N(10,2)",EI,Prix unitaire en euros,"Not null, ≥ 0, contrôlé par l’API (422)"
+disponibilite,N(1),EI,Disponibilité produit,"Not null, booléen 0 ou 1, contrôlé par l’API (422)"
+quantite,N(3),EI,Stock produit,"Not null, entier ≥ 0, contrôlé par l’API (422)"
+image,Binaire,EI,Image du produit,"Optionnel, stockée en base (MEDIUMBLOB)"
+image_mime,X(80),EI,Type MIME de l’image,"Optionnel (ex : image/png, image/jpeg, image/webp)"
 ,,,,
 MENUS,,,,
 id_menu,N(4),EI,Identifiant menu,PK
-nom,X(80),EI,Nom du menu,Menu Best Of Big Mac
-prix,"N(5,2)",EI,Prix du menu en euros,≥ 0.1
-disponibilite,N(1),EI,Disponibilité menu,"CHECK (disponibilite IN (0,1))"
+nom,X(120),EI,Nom du menu,Not null (Menu Best Of Big Mac)
+prix,"N(10,2)",EI,"Prix du menu en euros, taille M","Not null, ≥ 0. Taille S = M − 1 € (minimum 0,01 €), taille L = M + 1 € : calculées par l’API, tout autre écart est refusé (422)"
+disponibilite,N(1),EI,Disponibilité menu,"Not null, booléen 0 ou 1, contrôlé par l’API (422)"
+image,Binaire,EI,Image du menu,"Optionnel, stockée en base (MEDIUMBLOB)"
+image_mime,X(80),EI,Type MIME de l’image,"Optionnel (ex : image/png, image/jpeg, image/webp)"
 ,,,,
 COMMANDES,,,,
 id_cmd,N(7),EI,Identifiant commande,PK
-numero_ticket,X(20),EI,Numéro de ticket,Unique
+numero_ticket,X(30),EI,Numéro de ticket,Not null Unique
 date_cmd,DateTime,EI,Date et heure commande,Not null
-id_user,N(6),EI,Client ayant commandé,"FK UTILISATEUR, NULL autorisé si commande anonyme"
-id_statut,N(2),EI,Identifiant du statut de la commande,"FK STATUTS_COMMANDE (id_statut), Not Null"
-id_canal,N(2),EI,Identifiant du canal de commande,"FK CANAUX (id_canal), Not Null"
+id_user,N(6),EI,Client ayant commandé,"FK UTILISATEURS, NULL autorisé si commande anonyme"
+id_statut,N(2),EI,Identifiant du statut de la commande,"FK STATUTS_COMMANDES (id_statut), Not null"
+id_canal,N(2),EI,Identifiant du canal de commande,"FK CANAUX (id_canal), Not null"
+total_ttc,"N(10,2)",EI,Montant total TTC de la commande,"Not null, calculé par l’API (somme des prix_ligne)"
 ,,,,
 INGREDIENTS,,,,
 id_ingredient,N(6),EI,Identifiant ingrédient,PK
-nom,X(80),EI,Nom ingrédient,"Not null, idéalement Unique"
-cout_unitaire,"N(5,2)",EI,Coût / prix ingrédient,≥ 0
-quantite,N(6),EI,Stock ingrédient,≥ 0
+nom,X(120),EI,Nom ingrédient,"Not null, Unique"
+cout_unitaire,"N(10,2)",EI,Coût / prix ingrédient,"Not null, ≥ 0"
+quantite,N(6),EI,Stock ingrédient,"Not null, entier ≥ 0, contrôlé par l’API (422)"
 ,,,,
-COMMANDE_PRODUITS,,,,
+COMMANDE_PRODUIT,,,,
 id_cmd,N(7),EI,Identifiant de la commande,"PK, FK COMMANDES"
 id_produit,N(6),EI,Identifiant du produit commandé,"PK, FK PRODUITS"
-quantite,N(3),EI,Quantité de produit commandée,≥ 1
-prix_unitaire,"N(5,2)",EI,Prix unitaire du produit au moment de la commande,≥ 0
-prix_ligne,"N(7,2)",EI,Montant total de la ligne (quantite × prix_unitaire),≥ 0
+quantite,N(3),EI,Quantité de produit commandée,"Not null, ≥ 1, contrôlé par l’API (422)"
+prix_unitaire,"N(10,2)",EI,Prix unitaire du produit au moment de la commande,"Not null, ≥ 0, relu en base par l’API"
+prix_ligne,"N(10,2)",EI,Montant total de la ligne (quantite × prix_unitaire),"Not null, calculé par l’API"
 ,,,,
-COMMANDE_MENUS,,,,
-,,,,
-,,,,
-,,,,
-COMMANDE_MENUS,,,,
+COMMANDE_MENU,,,,
 id_cmd,N(7),EI,Identifiant de la commande,"PK, FK COMMANDES"
 id_menu,N(4),EI,Identifiant du menu commandé,"PK, FK MENUS"
-quantite,N(3),EI,Quantité de menus commandés,≥ 1
-taille,X(5),EI,"Taille choisie pour le menu (S, M, L si applicable)","CHECK (taille IN ('S','M','L'))"
-prix_unitaire,"N(5,2)",EI,Prix unitaire du menu au moment de la commande,≥ 0
-prix_ligne,"N(7,2)",EI,Montant total de la ligne (quantite × prix_unitaire),≥ 0
+quantite,N(3),EI,Quantité de menus commandés,"Not null, ≥ 1, contrôlé par l’API (422)"
+taille,X(20),EI,Taille choisie pour le menu (M par défaut),"Not null, S, M ou L, contrôlé par l’API (422)"
+prix_unitaire,"N(10,2)",EI,Prix unitaire du menu au moment de la commande,"Not null, prix de la taille choisie, calculé par l’API"
+prix_ligne,"N(10,2)",EI,Montant total de la ligne (quantite × prix_unitaire),"Not null, calculé par l’API"
 ,,,,
-MENU_PRODUITS,,,,
+MENU_PRODUIT,,,,
 id_menu,N(4),EI,Identifiant du menu,"PK, FK MENUS"
 id_produit,N(6),EI,Identifiant du produit composant le menu,"PK, FK PRODUITS"
-quantite,N(3),EI,Quantité du produit incluse dans le menu,≥ 1
+quantite,N(3),EI,Quantité du produit incluse dans le menu,"Not null, ≥ 1"
 ,,,,
 INGREDIENTS_PRODUITS,,,,
 id_produit,N(6),EI,Identifiant du produit,"PK, FK PRODUITS"
 id_ingredient,N(6),EI,Identifiant de l’ingrédient utilisé,"PK, FK INGREDIENTS"
-quantite,"N(6,2)",EI,Quantité d’ingrédient nécessaire pour le produit,≥ 1
+quantite,"N(6,2)",EI,Quantité d’ingrédient nécessaire pour le produit,"Not null, ≥ 1"
 ,,,,
 STATUTS_COMMANDES,,,,
 id_statut,N(2),EI,Identifiant du statut,PK
-libelle,X(30),EI,Libellé du statut,"Not Null, Unique (ex : en_preparation, prete, servie, annulee)"
+libelle,X(50),EI,Libellé du statut,"Not null, Unique (en_attente, en_preparation, prete, servie, annulee)"
 ,,,,
 CANAUX,,,,
 id_canal,N(2),EI,Identifiant du canal,PK
-libelle,X(30),EI,Libellé du canal de commande,"Not Null, Unique (borne, caisse, appli, drive)"
+libelle,X(50),EI,Libellé du canal de commande,"Not null, Unique (borne, caisse, appli, drive)"
 ,,,,
 PRODUITS_CATEGORIES,,,,
-id_produit,N(6),EI,Identifiant du produit,"PK, FK PRODUITS "
+id_produit,N(6),EI,Identifiant du produit,"PK, FK PRODUITS"
 id_cat,N(3),EI,Identifiant de la catégorie,"PK, FK CATEGORIES"
